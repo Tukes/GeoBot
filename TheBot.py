@@ -49,7 +49,6 @@ for c in markerText:
     marker.info = 'TODO'
     markers.append(marker)
 
-availableZoom = ('14','15','16','17') #будет использовать в одном if
 
 #Для составления запроса к google static maps, для получения картинки с метками
 requestStart = "https://maps.googleapis.com/maps/api/staticmap?center=" #lat, lon
@@ -63,30 +62,37 @@ requestEnd = "&zoom=&size=640x640&scale=2&markers=color:red"
     b14, b15, b16, b17 - кнопки, markup - клавиатура
 """
 b14 = {
-    'text' : '14',
+    'text' : '5км',
     'request_contact' : False,
     'request_location' : False,
     }
 b15 = {
-    'text' : '15',
+    'text' : '1.2км',
     'request_contact' : False,
     'request_location' : False,
     }
 b16 = {
-    'text' : '16',
+    'text' : '700м',
     'request_contact' : False,
     'request_location' : False,
     }
 b17 = {
-    'text' : '17',
+    'text' : '300м',
     'request_contact' : False,
     'request_location' : False,
     }
 markup = {
-    'keyboard' : [[b14, b15], [b16, b17]],
+    'keyboard' : [[b17, b16], [b15, b14]],
     'resize_keyboard' : True,
     'one_time_keyboard' : True,
     'selective' : True,
+    }
+
+zoomLevel = {            #replaces availableZoom and converts userFriendly radius to zoomLevel
+    '300м' : '17',
+    '700м' : '16',
+    '1.2км' : '15',
+    '5км' : '14',
     }
 
 #Основное тело:
@@ -140,23 +146,23 @@ class Handler(telepot.helper.ChatHandler):
                 self._request = self._request + c.requestString()
                 
             self._isLocSent = True
-            self.sender.sendMessage("Введите число от 14 до 17, чтобы выбрать увеличение.", reply_markup = markup)
+            self.sender.sendMessage("Выберете интересующий вас радиус", reply_markup = markup)
 
         elif self._isLocSent:
             if (content_type == 'text'):
-                if msg['text'] in availableZoom:
-                    self._zoom = msg['text']
+                if msg['text'] in zoomLevel:
+                    self._zoom = zoomLevel[msg['text']]
                     response = req.urlopen(self._request.replace("zoom=","zoom="+self._zoom))
                     screen = ("screen.png", response) #В telegram api обязательно нужно, чтобы у файла было название
                     self.sender.sendMessage("Запрос обрабатывается. Пожалуйста подождите.")
                     self.sender.sendPhoto(screen)
-                    self._sizeb = False
+                    self._isLocSent = False
                     return
                 else:
-                    self.sender.sendMessage("Введите число от 14 до 17, чтобы выбрать увеличение.", reply_markup = markup)
+                    self.sender.sendMessage("Выберете интересующий вас радиус", reply_markup = markup)
                     return
             else:
-                self.sender.sendMessage("Введите число от 14 до 17, чтобы выбрать увеличение.", reply_markup = markup)
+                self.sender.sendMessage("Выберете интересующий вас радиус", reply_markup = markup)
                 return
         else:
             self.sender.sendMessage("Неизвестная команда. Пожалуйста пришлите своё местоположение")
