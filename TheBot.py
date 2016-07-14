@@ -11,6 +11,9 @@ from urllib import request as req
 #for puthon 2
 #from urllib2 import request as req 
 
+#local stuff
+from userdb import UserDB
+
 #structure ho hold marker information
 class Marker:
     def __init__(self):
@@ -29,7 +32,9 @@ class Marker:
     def reqestString(self):
         return '%7C' + str(self.lat) + ',' + str(self.lon)
 
- 
+#get user base object
+userdb = UserDB('userdb.db')
+
 #Load markers from file, format lon,lat,hei\nlon,lat,hei ...
 #TODO skip manual parsing
 #TODO add command to reload
@@ -124,6 +129,11 @@ class Handler(telepot.helper.ChatHandler):
             print("Another Error")
         #_________________________________________________________________________________________________________________________________________________
 
+        #check if user meets minimum level of access
+        if (userdb.min4Tele(msg['from']['username']) == False):
+                print('User ' + msg['from']['username'] + ' tried to access bot, but was rejected')
+                self.sender.sendMessage(answerUnknownCommand)
+                return
 
         # Здесь можно обрабатывать команды вида /command
         """if content_type == 'text':

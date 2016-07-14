@@ -14,7 +14,7 @@ UserAccessAdmin    = 4
 #TODO consider all IDs as attack vectors
 class UserDB:
     def __init__(self, dbname):
-        self.conn = sqlite3.connect(dbname)
+        self.conn = sqlite3.connect(dbname, check_same_thread = False) #TODO while it is read-only; later use rw mutex?
         print('Opened database ' + dbname)
 
     def __del__(self):
