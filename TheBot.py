@@ -95,6 +95,10 @@ zoomLevel = {            #replaces availableZoom and converts userFriendly radiu
     '5км' : '14',
     }
 
+answerSelectRadius = 'Выберете интересующий вас радиус'
+answerUnknownCommand = 'Неизвестная команда. Пожалуйста пришлите своё местоположение' #Should be changed if new features provided
+answerQueryProcessing = 'Запрос обрабатывается. Пожалуйста подождите.'
+
 #Основное тело:
 class Handler(telepot.helper.ChatHandler):
     def __init__(self, seed_tuple, timeout):
@@ -146,7 +150,7 @@ class Handler(telepot.helper.ChatHandler):
                 self._request = self._request + c.requestString()
                 
             self._isLocSent = True
-            self.sender.sendMessage("Выберете интересующий вас радиус", reply_markup = markup)
+            self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
 
         elif self._isLocSent:
             if (content_type == 'text'):
@@ -154,18 +158,18 @@ class Handler(telepot.helper.ChatHandler):
                     self._zoom = zoomLevel[msg['text']]
                     response = req.urlopen(self._request.replace("zoom=","zoom="+self._zoom))
                     screen = ("screen.png", response) #В telegram api обязательно нужно, чтобы у файла было название
-                    self.sender.sendMessage("Запрос обрабатывается. Пожалуйста подождите.")
+                    self.sender.sendMessage(answerQueryProcessing)
                     self.sender.sendPhoto(screen)
                     self._isLocSent = False
                     return
                 else:
-                    self.sender.sendMessage("Выберете интересующий вас радиус", reply_markup = markup)
+                    self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
                     return
             else:
-                self.sender.sendMessage("Выберете интересующий вас радиус", reply_markup = markup)
+                self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
                 return
         else:
-            self.sender.sendMessage("Неизвестная команда. Пожалуйста пришлите своё местоположение")
+            self.sender.sendMessage(answerUnknownCommand)
             return
 #for debug on local machine
 TOKEN = input("Введите Token: ")
