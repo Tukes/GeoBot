@@ -11,13 +11,43 @@ from urllib import request as req
 #for puthon 2
 #from urllib2 import request as req 
 
-#Загружаем список координат маркеров и формируем список вида [[,],[,],[,],...]
+#structure ho hold marker information
+class Marker:
+    def __init__(self):
+        self.lat = 0.0
+        self.lon = 0.0
+        self.hei = 0.0
+        self.name = ''
+        self.info = ''
+
+    #todo remove magic numbers
+    def relevant(self, lat0, lon0):
+        if (abs(self.lon - lon0) <= 0.025) and (abs(self.lat - lat0) <= 0.015):
+            return True
+        return False
+
+    def reqestString(self):
+        return '%7C' + str(self.lat) + ',' + str(self.lon)
+
+ 
+#Load markers from file, format lon,lat,hei\nlon,lat,hei ...
+#TODO skip manual parsing
+#TODO add command to reload
+#TODO rights to reload?
 markerFile = open('parsed.txt', 'r')
 markerText = markerFile.readlines()
 markerFile.close()
+
 markers = []
 for c in markerText:
-    markers.append(c.split(','))
+    coords = c.split(',') #TODO better parsing
+    marker = Marker()
+    marker.lat = float(coords[1])
+    marker.lon = float(coords[0])
+    marker.hei = float(coords[2])
+    marker.name = 'TODO'
+    marker.info = 'TODO'
+    markers.append(marker)
 
 availableZoom = ('14','15','16','17') #будет использовать в одном if
 
@@ -93,25 +123,21 @@ class Handler(telepot.helper.ChatHandler):
         #
 
         if (content_type == 'location') and (not self._isLocSent):
-            lat = msg['location']['latitude']
-            lon = msg['location']['longitude']
+            lat0 = float(msg['location']['latitude'])
+            lon0 = float(msg['location']['longitude'])
+
+            #form short list of markers nearby to meet google static map API limit of 2048 chars
             localMarkers = []
-            """ По поводу localMarkers. В api google static map, есть ограничение
-                URL-адреса Google Static Maps API должны содержать не более 2048 символов.
-                В следствие чего, необходимо выбрать только те маркеры, которые будут видны
-                пользователю """
 
             for c in markers:
-                if (abs(float(c[0])- lon)<=0.025) and (abs(float(c[1])- lat)<=0.015):
+                if c.relevant(lat0, lon0):
                     localMarkers.append(c)
-            # Числа 0.025 и 0.015 выбирал примерно. Открыл карту, отдалил
-            # примерно как при увеличении 14 и в ручную посчитал разницу
-            # между верхней границей и нижней - широта, аналогично для долготы
 
-            # Далее составляю запрос (https://developers.google.com/maps/documentation/static-maps/intro?hl=ru)
-            self._request = requestStart + str(lat) + ',' + str(lon) + requestEnd
+            #make request string for google maps api for picture
+            #see docs at https://developers.google.com/maps/documentation/static-maps/intro
+            self._request = requestStart + str(lat0) + ',' + str(lon0) + requestEnd
             for c in localMarkers:
-                self._request = self._request + '%7C' + c[1] + ',' + c[0]
+                self._request = self._request + c.requestString()
                 
             self._isLocSent = True
             self.sender.sendMessage("Введите число от 14 до 17, чтобы выбрать увеличение.", reply_markup = markup)
