@@ -138,7 +138,7 @@ class Handler(telepot.helper.ChatHandler):
 #for debug on local machine
 TOKEN = input("Введите Token: ")
 #for debug on server
-TOKEN = sys.argv[1]
+#TOKEN = sys.argv[1]
 
 bot = telepot.DelegatorBot(TOKEN, [
     (per_chat_id(), create_open(Handler, timeout=60)),
