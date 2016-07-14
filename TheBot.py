@@ -1,30 +1,29 @@
 #!/usr/bin/env python 
 # -*- coding: utf-8 -*-
+
 import telepot
 from telepot.delegate import per_chat_id, create_open
 import time
-from urllib import request as req   #На сервере использую: import urllib2 as req 
-from pprint import pprint     #Для красивого вывода в консоль/лог
+from pprint import pprint
 
-"""
-    Первые две строчки здесь, чтобы на сервере он не выдавал ошибку
-    SyntaxERROR: Non ASCII characte
-    при встрече кириллических символов
-"""
+#for python 3
+from urllib import request as req
+#for puthon 2
+#from urllib2 import request as req 
 
 #Загружаем список координат маркеров и формируем список вида [[,],[,],[,],...]
-In = open('parsed.txt', 'r')
-In_txt = In.readlines()
-In.close()
+markerFile = open('parsed.txt', 'r')
+markerText = markerFile.readlines()
+markerFile.close()
 markers = []
-for c in In_txt:
+for c in markerText:
     markers.append(c.split(','))
 
-available_zoom = ('14','15','16','17') #будет использовать в одном if
+availableZoom = ('14','15','16','17') #будет использовать в одном if
 
 #Для составления запроса к google static maps, для получения картинки с метками
-start = "https://maps.googleapis.com/maps/api/staticmap?center=" #lat, lon
-end = "&zoom=&size=640x640&scale=2&markers=color:red"
+requestStart = "https://maps.googleapis.com/maps/api/staticmap?center=" #lat, lon
+requestEnd = "&zoom=&size=640x640&scale=2&markers=color:red"
 
 
 """
@@ -96,22 +95,22 @@ class Handler(telepot.helper.ChatHandler):
         if (content_type == 'location') and (not self._isLocSent):
             lat = msg['location']['latitude']
             lon = msg['location']['longitude']
-            c_markers = []
-            """ По поводу c_markers. В api google static map, есть ограничение
+            localMarkers = []
+            """ По поводу localMarkers. В api google static map, есть ограничение
                 URL-адреса Google Static Maps API должны содержать не более 2048 символов.
                 В следствие чего, необходимо выбрать только те маркеры, которые будут видны
                 пользователю """
 
             for c in markers:
                 if (abs(float(c[0])- lon)<=0.025) and (abs(float(c[1])- lat)<=0.015):
-                    c_markers.append(c)
+                    localMarkers.append(c)
             # Числа 0.025 и 0.015 выбирал примерно. Открыл карту, отдалил
             # примерно как при увеличении 14 и в ручную посчитал разницу
             # между верхней границей и нижней - широта, аналогично для долготы
 
             # Далее составляю запрос (https://developers.google.com/maps/documentation/static-maps/intro?hl=ru)
-            self._request = start + str(lat) + ',' + str(lon) + end
-            for c in c_markers:
+            self._request = requestStart + str(lat) + ',' + str(lon) + requestEnd
+            for c in localMarkers:
                 self._request = self._request + '%7C' + c[1] + ',' + c[0]
                 
             self._isLocSent = True
@@ -119,7 +118,7 @@ class Handler(telepot.helper.ChatHandler):
 
         elif self._isLocSent:
             if (content_type == 'text'):
-                if msg['text'] in available_zoom:
+                if msg['text'] in availableZoom:
                     self._zoom = msg['text']
                     response = req.urlopen(self._request.replace("zoom=","zoom="+self._zoom))
                     screen = ("screen.png", response) #В telegram api обязательно нужно, чтобы у файла было название
@@ -136,9 +135,13 @@ class Handler(telepot.helper.ChatHandler):
         else:
             self.sender.sendMessage("Неизвестная команда. Пожалуйста пришлите своё местоположение")
             return
+#for debug on local machine
+TOKEN = input("Введите Token: ")
+#for debug on server
+#TOKEN = sys.argv[1]
 
-TOKEN = input("Введите Token: ") #Или TOKEN = sys.argv[1] для сервера
 bot = telepot.DelegatorBot(TOKEN, [
     (per_chat_id(), create_open(Handler, timeout=60)),
 ])
 bot.message_loop(run_forever='Listening ...')
+
