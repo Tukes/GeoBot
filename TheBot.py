@@ -9,7 +9,9 @@ from pprint import pprint
 #for python 3
 from urllib import request as req
 #for puthon 2
-#from urllib2 import request as req 
+#import urllib2 as req
+#for sys.argv[1]
+#import sys
 
 #structure ho hold marker information
 class Marker:
@@ -34,19 +36,19 @@ class Marker:
 #TODO skip manual parsing
 #TODO add command to reload
 #TODO rights to reload?
-markerFile = open('parsed.txt', 'r')
+markerFile = open('marks.txt', 'r')
 markerText = markerFile.readlines()
 markerFile.close()
 
 markers = []
 for c in markerText:
-    coords = c.split(',') #TODO better parsing
+    coords = c.split(' - ') #TODO better parsing
     marker = Marker()
     marker.lat = float(coords[1])
     marker.lon = float(coords[0])
     marker.hei = float(coords[2])
-    marker.name = 'TODO'
-    marker.info = 'TODO'
+    marker.name = coords[3]
+    marker.info = coords[4]
     markers.append(marker)
 
 
@@ -89,10 +91,10 @@ markup = {
     }
 
 zoomLevel = {            #replaces availableZoom and converts userFriendly radius to zoomLevel
-    '300м' : '17',
-    '700м' : '16',
-    '1.2км' : '15',
-    '5км' : '14',
+    u'300м' : '17',      #u' ', here 'u' is needed for working on server and doesn't break 
+    u'700м' : '16',      #debugging on local machine
+    u'1.2км' : '15',
+    u'5км' : '14',
     }
 
 answerSelectRadius = 'Выберете интересующий вас радиус'
@@ -180,4 +182,3 @@ bot = telepot.DelegatorBot(TOKEN, [
     (per_chat_id(), create_open(Handler, timeout=60)),
 ])
 bot.message_loop(run_forever='Listening ...')
-
