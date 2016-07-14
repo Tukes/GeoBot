@@ -26,7 +26,7 @@ class Marker:
             return True
         return False
 
-    def reqestString(self):
+    def requestString(self):
         return '%7C' + str(self.lat) + ',' + str(self.lon)
 
  
@@ -34,19 +34,19 @@ class Marker:
 #TODO skip manual parsing
 #TODO add command to reload
 #TODO rights to reload?
-markerFile = open('parsed.txt', 'r')
+markerFile = open('marks.txt', 'r')
 markerText = markerFile.readlines()
 markerFile.close()
 
 markers = []
 for c in markerText:
-    coords = c.split(',') #TODO better parsing
+    coords = c.split(' - ') #TODO better parsing
     marker = Marker()
     marker.lat = float(coords[1])
     marker.lon = float(coords[0])
     marker.hei = float(coords[2])
-    marker.name = 'TODO'
-    marker.info = 'TODO'
+    marker.name = coords[3]
+    marker.info = coords[4]
     markers.append(marker)
 
 
