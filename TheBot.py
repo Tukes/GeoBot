@@ -29,7 +29,7 @@ class Marker:
             return True
         return False
 
-    def reqestString(self):
+    def requestString(self):
         return '%7C' + str(self.lat) + ',' + str(self.lon)
 
 #get user base object
@@ -182,7 +182,7 @@ class Handler(telepot.helper.ChatHandler):
             self.sender.sendMessage(answerUnknownCommand)
             return
 #for debug on local machine
-TOKEN = input("Введите Token: ")
+TOKEN = input('Provide bot token: ')
 #for debug on server
 #TOKEN = sys.argv[1]
 
