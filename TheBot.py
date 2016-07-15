@@ -13,6 +13,9 @@ from urllib import request as req
 #for sys.argv[1]
 #import sys
 
+#local stuff
+from userdb import UserDB
+
 #structure ho hold marker information
 class Marker:
     def __init__(self):
@@ -31,7 +34,9 @@ class Marker:
     def requestString(self):
         return '%7C' + str(self.lat) + ',' + str(self.lon)
 
- 
+#get user base object
+userdb = UserDB('userdb.db')
+
 #Load markers from file, format lon,lat,hei\nlon,lat,hei ...
 #TODO skip manual parsing
 #TODO add command to reload
@@ -55,7 +60,6 @@ for c in markerText:
 #Для составления запроса к google static maps, для получения картинки с метками
 requestStart = "https://maps.googleapis.com/maps/api/staticmap?center=" #lat, lon
 requestEnd = "&zoom=&size=640x640&scale=2&markers=color:red"
-
 
 """
     Далее грязь -.- Создаю кнопки и кастомную клавиатуру вручную
@@ -101,14 +105,13 @@ answerSelectRadius = 'Выберете интересующий вас ради�
 answerUnknownCommand = 'Неизвестная команда. Пожалуйста пришлите своё местоположение' #Should be changed if new features provided
 answerQueryProcessing = 'Запрос обрабатывается. Пожалуйста подождите.'
 
+#TODO how to set up keyboard with zoom by default?
+
 #Основное тело:
 class Handler(telepot.helper.ChatHandler):
     def __init__(self, seed_tuple, timeout):
         super(Handler, self).__init__(seed_tuple, timeout)
-        #Создаем локальные переменные на чат
-        self._zoom = ''             #Увеличение
-        self._isLocSent = False     #Отправил ли пользователь нам Location
-        self._request = ''          #Запрос для google static maps
+        self._zoom = -2 #not verified yet
 
     def on_chat_message(self, msg): #обработчик сообщений
         content_type, chat_type, chat_id = telepot.glance(msg)
@@ -126,6 +129,20 @@ class Handler(telepot.helper.ChatHandler):
             print("Another Error")
         #_________________________________________________________________________________________________________________________________________________
 
+        #ask db for user rights
+        userZoom = userdb.zoom4Tele(msg['from']['id'])
+        
+        #store value coming from database
+        self._zoom = userZoom
+
+        #check if user meets minimum level of access
+        if (self._zoom <= 0):
+            #TODO security
+            #print('User <' + str(msg['from']['id']) + "/@" + msg['from']['username'] + '> tried to access bot, but was rejected')
+            #self.sender.sendMessage(answerUnknownCommand)
+            userdb.addUser(msg['from']['id'], msg['from']['username'])
+            self._zoom = 16
+            #return
 
         # Здесь можно обрабатывать команды вида /command
         """if content_type == 'text':
@@ -134,7 +151,7 @@ class Handler(telepot.helper.ChatHandler):
                 return"""
         #
 
-        if (content_type == 'location') and (not self._isLocSent):
+        if (content_type == 'location'):
             lat0 = float(msg['location']['latitude'])
             lon0 = float(msg['location']['longitude'])
 
@@ -147,32 +164,26 @@ class Handler(telepot.helper.ChatHandler):
 
             #make request string for google maps api for picture
             #see docs at https://developers.google.com/maps/documentation/static-maps/intro
-            self._request = requestStart + str(lat0) + ',' + str(lon0) + requestEnd
+            request = requestStart + str(lat0) + ',' + str(lon0) + requestEnd
             for c in localMarkers:
-                self._request = self._request + c.requestString()
-                
-            self._isLocSent = True
-            self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
+                request = request + c.requestString()
 
-        elif self._isLocSent:
-            if (content_type == 'text'):
-                if msg['text'] in zoomLevel:
-                    self._zoom = zoomLevel[msg['text']]
-                    response = req.urlopen(self._request.replace("zoom=","zoom="+self._zoom))
-                    screen = ("screen.png", response) #В telegram api обязательно нужно, чтобы у файла было название
-                    self.sender.sendMessage(answerQueryProcessing)
-                    self.sender.sendPhoto(screen)
-                    self._isLocSent = False
-                    return
-                else:
-                    self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
-                    return
-            else:
-                self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
-                return
-        else:
-            self.sender.sendMessage(answerUnknownCommand)
+            self.sender.sendMessage(answerQueryProcessing)
+            response = req.urlopen(request.replace("zoom=","zoom="+str(self._zoom)))
+
+            screen = ("screen.png", response) #filename mandatory in telegram API
+            self.sender.sendPhoto(screen)
+
             return
+
+        elif (content_type == 'text'):
+                if msg['text'] in zoomLevel:
+                    newZoom = int(zoomLevel[msg['text']])
+                    userdb.setZoom4Tele(msg['from']['id'], newZoom)
+                    return
+ 
+        self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
+
 #for debug on local machine
 TOKEN = input('Provide bot token: ')
 #for debug on server
