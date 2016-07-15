@@ -54,6 +54,13 @@ class UserDB:
         ' WHERE user.telegramid = ' + str(telegramid))
         self.conn.commit()
 
+    def addUser(self, telegramid, telegramname, access = UserAccessUser):
+        self.conn.execute(
+        ' INSERT INTO user (telegramid, telegramname, access)'
+        ' VALUES (' + str(telegramid) + ', \'' + telegramname + '\',' + str(access) + ')')
+        self.conn.commit()
+
+
 #for debug/example only
 if __name__ == "__main__":
     users = UserDB('userdb.db')
