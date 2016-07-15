@@ -169,7 +169,7 @@ class Handler(telepot.helper.ChatHandler):
                 request = request + c.requestString()
 
             self.sender.sendMessage(answerQueryProcessing)
-            response = req.urlopen(request.replace("zoom=","zoom="+self._zoom))
+            response = req.urlopen(request.replace("zoom=","zoom="+str(self._zoom)))
 
             screen = ("screen.png", response) #filename mandatory in telegram API
             self.sender.sendPhoto(screen)
