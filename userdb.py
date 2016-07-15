@@ -25,35 +25,40 @@ class UserDB:
         cursor = self.conn.execute(
         ' SELECT user.userid'
         ' FROM user'
-        ' WHERE user.telegramid = \'' + telegramid + '\'')
+        ' WHERE user.telegramid = ' + str(telegramid))
 
         for row in cursor:
-            return row[0]
+            return int(row[0])
 
-        print ('User @' + telegramid + ' not found')
         return -1
 
     #most commonly needed method
-    #check if user has minimum access
-    def min4Tele(self, telegramid):
+    #check preferred zoom level; return -1 if user cannot see map
+    def zoom4Tele(self, telegramid):
         cursor = self.conn.execute(
-        ' SELECT 1'
+        ' SELECT user.zoom'
         ' FROM user'
-        ' WHERE user.telegramid = \'' + telegramid + '\''
+        ' WHERE user.telegramid = ' + str(telegramid) +
         ' AND user.ban = 0'
         ' AND user.access > ' + str(UserAccessUnknown))
 
         for row in cursor:
-            return row[0] == 1 #just in case
+            return int(row[0])
 
-        return False #user missed something, no access
+        return -1 #user missed something, no access
 
+    def setZoom4Tele(self, telegramid, zoom):
+        self.conn.execute(
+        ' UPDATE user'
+        ' SET zoom = ' + str(zoom) +
+        ' WHERE user.telegramid = ' + str(telegramid))
+        self.conn.commit()
 
 #for debug/example only
 if __name__ == "__main__":
     users = UserDB('userdb.db')
-    print('Admin ID ' + str(users.id4Tele('admin')))
-    print('Cheater ID ' + str(users.id4Tele('cheater')))
-    print('Will @admin see a map? ' + str(users.min4Tele('admin')))
-    print('Will @cheater see a map? ' + str(users.min4Tele('cheater'))) #TODO - make a unittest of this?
-
+    print('<1/@admin> internal ID ' + str(users.id4Tele(1)))
+    print('<567/@cheater> internal ID ' + str(users.id4Tele(567)))
+    print('Will <1/@admin> see a map? ' + str(users.zoom4Tele(1) > 0))
+    print('Will <567/@cheater> see a map? ' + str(users.zoom4Tele(567) > 0)) #TODO - make a unittest of this?
+    print('<1/@admin> prefers zoom level ' + str(users.zoom4Tele(1)))
