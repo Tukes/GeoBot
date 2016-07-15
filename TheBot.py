@@ -137,9 +137,12 @@ class Handler(telepot.helper.ChatHandler):
 
         #check if user meets minimum level of access
         if (self._zoom <= 0):
-            print('User <' + str(msg['from']['id']) + "/@" + msg['from']['username'] + '> tried to access bot, but was rejected')
-            self.sender.sendMessage(answerUnknownCommand)
-            return
+            #TODO security
+            #print('User <' + str(msg['from']['id']) + "/@" + msg['from']['username'] + '> tried to access bot, but was rejected')
+            #self.sender.sendMessage(answerUnknownCommand)
+            userdb.addUser(msg['from']['id'], msg['from']['username'])
+            self._zoom = 16
+            #return
 
         # Здесь можно обрабатывать команды вида /command
         """if content_type == 'text':
