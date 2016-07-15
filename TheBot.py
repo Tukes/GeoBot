@@ -59,7 +59,7 @@ for c in markerText:
 
 #Для составления запроса к google static maps, для получения картинки с метками
 requestStart = "https://maps.googleapis.com/maps/api/staticmap?center=" #lat, lon
-requestEnd = "&size=640x640&scale=2&markers=color:red&zoom=" #zoom should be last to make easy append
+requestEnd = "&zoom=&size=640x640&scale=2&markers=color:red"
 
 """
     Далее грязь -.- Создаю кнопки и кастомную клавиатуру вручную
@@ -164,12 +164,12 @@ class Handler(telepot.helper.ChatHandler):
 
             #make request string for google maps api for picture
             #see docs at https://developers.google.com/maps/documentation/static-maps/intro
-            request = requestStart + str(lat0) + ',' + str(lon0) + requestEnd + str(self._zoom)
+            request = requestStart + str(lat0) + ',' + str(lon0) + requestEnd
             for c in localMarkers:
                 request = request + c.requestString()
 
             self.sender.sendMessage(answerQueryProcessing)
-            response = req.urlopen(request)
+            response = req.urlopen(request.replace("zoom=","zoom="+self._zoom))
 
             screen = ("screen.png", response) #filename mandatory in telegram API
             self.sender.sendPhoto(screen)
