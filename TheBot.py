@@ -4,19 +4,17 @@
 import telepot
 from telepot.delegate import per_chat_id, create_open
 import time
-from pprint import pprint
+import sys
 
 #for python 3
 from urllib import request as req
 #for puthon 2
 #import urllib2 as req
-#for sys.argv[1]
-#import sys
 
 #local stuff
 from userdb import UserDB
 
-#structure ho hold marker information
+#structure to hold marker information
 class Marker:
     def __init__(self):
         self.lat = 0.0
@@ -33,9 +31,6 @@ class Marker:
 
     def requestString(self):
         return '%7C' + str(self.lat) + ',' + str(self.lon)
-
-#get user base object
-userdb = UserDB('userdb.db')
 
 #Load markers from file, format lon,lat,hei\nlon,lat,hei ...
 #TODO skip manual parsing
@@ -105,44 +100,38 @@ answerSelectRadius = 'Выберете интересующий вас ради�
 answerUnknownCommand = 'Неизвестная команда. Пожалуйста пришлите своё местоположение' #Should be changed if new features provided
 answerQueryProcessing = 'Запрос обрабатывается. Пожалуйста подождите.'
 
-#TODO how to set up keyboard with zoom by default?
-
-#Основное тело:
 class Handler(telepot.helper.ChatHandler):
     def __init__(self, seed_tuple, timeout):
         super(Handler, self).__init__(seed_tuple, timeout)
-        self._zoom = -2 #not verified yet
+        self._zoom = -1 #not verified yet
+        self._teleId = -1 #not known yet
+
+    def on_close(self, exception):
+        if (self._teleId > 0) and (self._zoom > 0):
+            userdb.setZoom4Tele(self._teleId, self._zoom)
+        print('Closing instance for ' + str(self._teleId))
 
     def on_chat_message(self, msg): #обработчик сообщений
         content_type, chat_type, chat_id = telepot.glance(msg)
 
-        #Здесь просто делаю некий лог_____________________________________________________________________________________________________________________
-        """ Try здесь нужен, т.к. если в нике есть emoji,
-            то поднимается ошибка UnicodeEncodeError """
-        try:
-            pprint(time.ctime() + "  " + msg['chat']['username'] + "  " + content_type) # можно поставить pprint(msg), чтобы посмотреть
-                                                                                        # как выглядит структура msg (какие данные есть/как обращаться)
-        except UnicodeEncodeError:
-            print("UnicodeEncodeError. Probably emoji in username")
+        #get them once, reuse through all routine
+        self._teleId = msg['from']['id']
+        teleUsername = ''
 
-        except:
-            print("Another Error")
-        #_________________________________________________________________________________________________________________________________________________
+        if ('username' in msg['from']):
+            teleUsername = msg['from']['username']
 
-        #ask db for user rights
-        userZoom = userdb.zoom4Tele(msg['from']['id'])
-        
-        #store value coming from database
-        self._zoom = userZoom
+        print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + ' <' + str(self._teleId) + "/@" + teleUsername + "> " + content_type)
+
+        #ask db for user rights if not cached
+        if (self._zoom < 0):
+            self._zoom = userdb.zoom4Tele(self._teleId)
 
         #check if user meets minimum level of access
         if (self._zoom <= 0):
-            #TODO security
-            #print('User <' + str(msg['from']['id']) + "/@" + msg['from']['username'] + '> tried to access bot, but was rejected')
-            #self.sender.sendMessage(answerUnknownCommand)
-            userdb.addUser(msg['from']['id'], msg['from']['username'])
-            self._zoom = 16
-            #return
+            print('User <' + str(self._teleId) + "/@" + teleUsername + '> tried to access bot, but was rejected with ' + str(self._zoom))
+            self.sender.sendMessage(answerUnknownCommand, reply_markup = markup)
+            return
 
         # Здесь можно обрабатывать команды вида /command
         """if content_type == 'text':
@@ -172,24 +161,27 @@ class Handler(telepot.helper.ChatHandler):
             response = req.urlopen(request.replace("zoom=","zoom="+str(self._zoom)))
 
             screen = ("screen.png", response) #filename mandatory in telegram API
-            self.sender.sendPhoto(screen)
+            self.sender.sendPhoto(screen, reply_markup = markup)
 
             return
 
         elif (content_type == 'text'):
                 if msg['text'] in zoomLevel:
-                    newZoom = int(zoomLevel[msg['text']])
-                    userdb.setZoom4Tele(msg['from']['id'], newZoom)
+                    self._zoom = int(zoomLevel[msg['text']])
                     return
  
         self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
 
 #for debug on local machine
 TOKEN = input('Provide bot token: ')
+DBURL = input('Provide user DB URL: ')
 #for debug on server
 #TOKEN = sys.argv[1]
+#DBURL = sys.argv[2]
 
+userdb = UserDB(DBURL)
 bot = telepot.DelegatorBot(TOKEN, [
-    (per_chat_id(), create_open(Handler, timeout=60)),
+    (per_chat_id(), create_open(Handler, timeout=300)),
 ])
 bot.message_loop(run_forever='Listening ...')
+
