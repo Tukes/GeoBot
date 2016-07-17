@@ -7,19 +7,50 @@ import time
 from pprint import pprint
 
 #for python 3
-from urllib import request as req
+#from urllib import request as req
 #for puthon 2
-#from urllib2 import request as req 
+import urllib2 as req
+#for sys.args
+import sys
 
-#Загружаем список координат маркеров и формируем список вида [[,],[,],[,],...]
-markerFile = open('parsed.txt', 'r')
+#structure ho hold marker information
+class Marker:
+    def __init__(self):
+        self.lat = 0.0
+        self.lon = 0.0
+        self.hei = 0.0
+        self.name = ''
+        self.info = ''
+
+    #todo remove magic numbers
+    def relevant(self, lat0, lon0):
+        if (abs(self.lon - lon0) <= 0.025) and (abs(self.lat - lat0) <= 0.015):
+            return True
+        return False
+
+    def requestString(self):
+        return '%7C' + str(self.lat) + ',' + str(self.lon)
+
+ 
+#Load markers from file, format lon,lat,hei\nlon,lat,hei ...
+#TODO skip manual parsing
+#TODO add command to reload
+#TODO rights to reload?
+markerFile = open('marks.txt', 'r')
 markerText = markerFile.readlines()
 markerFile.close()
+
 markers = []
 for c in markerText:
-    markers.append(c.split(','))
+    coords = c.split(' - ') #TODO better parsing
+    marker = Marker()
+    marker.lat = float(coords[1])
+    marker.lon = float(coords[0])
+    marker.hei = float(coords[2])
+    marker.name = coords[3]
+    marker.info = coords[4]
+    markers.append(marker)
 
-availableZoom = ('14','15','16','17') #будет использовать в одном if
 
 #Для составления запроса к google static maps, для получения картинки с метками
 requestStart = "https://maps.googleapis.com/maps/api/staticmap?center=" #lat, lon
@@ -33,31 +64,42 @@ requestEnd = "&zoom=&size=640x640&scale=2&markers=color:red"
     b14, b15, b16, b17 - кнопки, markup - клавиатура
 """
 b14 = {
-    'text' : '14',
+    'text' : '5км',
     'request_contact' : False,
     'request_location' : False,
     }
 b15 = {
-    'text' : '15',
+    'text' : '1.2км',
     'request_contact' : False,
     'request_location' : False,
     }
 b16 = {
-    'text' : '16',
+    'text' : '700м',
     'request_contact' : False,
     'request_location' : False,
     }
 b17 = {
-    'text' : '17',
+    'text' : '300м',
     'request_contact' : False,
     'request_location' : False,
     }
 markup = {
-    'keyboard' : [[b14, b15], [b16, b17]],
+    'keyboard' : [[b17, b16], [b15, b14]],
     'resize_keyboard' : True,
     'one_time_keyboard' : True,
     'selective' : True,
     }
+
+zoomLevel = {            #replaces availableZoom and converts userFriendly radius to zoomLevel
+    u'300м' : '17',
+    u'700м' : '16',
+    u'1.2км' : '15',
+    u'5км' : '14',
+    }
+
+answerSelectRadius = 'Выберете интересующий вас радиус'
+answerUnknownCommand = 'Неизвестная команда. Пожалуйста пришлите своё местоположение' #Should be changed if new features provided
+answerQueryProcessing = 'Запрос обрабатывается. Пожалуйста подождите.'
 
 #Основное тело:
 class Handler(telepot.helper.ChatHandler):
@@ -81,64 +123,60 @@ class Handler(telepot.helper.ChatHandler):
             print("UnicodeEncodeError. Probably emoji in username")
 
         except:
-            print("Another Error")
+            print("Another Error. Probably no @nickname")
         #_________________________________________________________________________________________________________________________________________________
 
 
         # Здесь можно обрабатывать команды вида /command
-        """if content_type == 'text':
-            if msg['text'] == '/help':
-                self.sender.sendMessage("")
-                return"""
+        if content_type == 'text':
+            if (msg['text'] == '/start') or (msg['text'] == '/help'):
+                self.sender.sendMessage("Для того, чтобы получить снимок карты с отмеченными на нём метками, пришлите Location (для этого нужно нажать на скрепку(прикрепить) и там выбрать Location), затем задайте интересующий вас радиус (300м, 700м, 1.2км или же 5км). После чего немного подождите.")
+                return
         #
 
         if (content_type == 'location') and (not self._isLocSent):
-            lat = msg['location']['latitude']
-            lon = msg['location']['longitude']
+            lat0 = float(msg['location']['latitude'])
+            lon0 = float(msg['location']['longitude'])
+
+            #form short list of markers nearby to meet google static map API limit of 2048 chars
             localMarkers = []
-            """ По поводу localMarkers. В api google static map, есть ограничение
-                URL-адреса Google Static Maps API должны содержать не более 2048 символов.
-                В следствие чего, необходимо выбрать только те маркеры, которые будут видны
-                пользователю """
 
             for c in markers:
-                if (abs(float(c[0])- lon)<=0.025) and (abs(float(c[1])- lat)<=0.015):
+                if c.relevant(lat0, lon0):
                     localMarkers.append(c)
-            # Числа 0.025 и 0.015 выбирал примерно. Открыл карту, отдалил
-            # примерно как при увеличении 14 и в ручную посчитал разницу
-            # между верхней границей и нижней - широта, аналогично для долготы
 
-            # Далее составляю запрос (https://developers.google.com/maps/documentation/static-maps/intro?hl=ru)
-            self._request = requestStart + str(lat) + ',' + str(lon) + requestEnd
+            #make request string for google maps api for picture
+            #see docs at https://developers.google.com/maps/documentation/static-maps/intro
+            self._request = requestStart + str(lat0) + ',' + str(lon0) + requestEnd
             for c in localMarkers:
-                self._request = self._request + '%7C' + c[1] + ',' + c[0]
+                self._request = self._request + c.requestString()
                 
             self._isLocSent = True
-            self.sender.sendMessage("Введите число от 14 до 17, чтобы выбрать увеличение.", reply_markup = markup)
+            self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
 
         elif self._isLocSent:
             if (content_type == 'text'):
-                if msg['text'] in availableZoom:
-                    self._zoom = msg['text']
+                if msg['text'] in zoomLevel:
+                    self._zoom = zoomLevel[msg['text']]
                     response = req.urlopen(self._request.replace("zoom=","zoom="+self._zoom))
                     screen = ("screen.png", response) #В telegram api обязательно нужно, чтобы у файла было название
-                    self.sender.sendMessage("Запрос обрабатывается. Пожалуйста подождите.")
+                    self.sender.sendMessage(answerQueryProcessing)
                     self.sender.sendPhoto(screen)
-                    self._sizeb = False
+                    self._isLocSent = False
                     return
                 else:
-                    self.sender.sendMessage("Введите число от 14 до 17, чтобы выбрать увеличение.", reply_markup = markup)
+                    self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
                     return
             else:
-                self.sender.sendMessage("Введите число от 14 до 17, чтобы выбрать увеличение.", reply_markup = markup)
+                self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
                 return
         else:
-            self.sender.sendMessage("Неизвестная команда. Пожалуйста пришлите своё местоположение")
+            self.sender.sendMessage(answerUnknownCommand)
             return
 #for debug on local machine
-TOKEN = input("Введите Token: ")
+#TOKEN = raw_input("Введите Token: ")
 #for debug on server
-#TOKEN = sys.argv[1]
+TOKEN = sys.argv[1]
 
 bot = telepot.DelegatorBot(TOKEN, [
     (per_chat_id(), create_open(Handler, timeout=60)),
