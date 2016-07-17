@@ -104,26 +104,32 @@ class Handler(telepot.helper.ChatHandler):
     def __init__(self, seed_tuple, timeout):
         super(Handler, self).__init__(seed_tuple, timeout)
         self._zoom = -1 #not verified yet
+        self._teleId = -1 #not known yet
+
+    def on_close(self, exception):
+        if (self._teleId > 0) and (self._zoom > 0):
+            userdb.setZoom4Tele(self._teleId, self._zoom)
+        print('Closing instance for ' + str(self._teleId))
 
     def on_chat_message(self, msg): #обработчик сообщений
         content_type, chat_type, chat_id = telepot.glance(msg)
 
         #get them once, reuse through all routine
-        teleId = msg['from']['id']
+        self._teleId = msg['from']['id']
         teleUsername = ''
 
         if ('username' in msg['from']):
             teleUsername = msg['from']['username']
 
-        print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + ' <' + str(teleId) + "/@" + teleUsername + "> " + content_type)
+        print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + ' <' + str(self._teleId) + "/@" + teleUsername + "> " + content_type)
 
         #ask db for user rights if not cached
         if (self._zoom < 0):
-            self._zoom = userdb.zoom4Tele(teleId)
+            self._zoom = userdb.zoom4Tele(self._teleId)
 
         #check if user meets minimum level of access
         if (self._zoom <= 0):
-            print('User <' + str(teleId) + "/@" + teleUsername + '> tried to access bot, but was rejected with ' + str(self._zoom))
+            print('User <' + str(self._teleId) + "/@" + teleUsername + '> tried to access bot, but was rejected with ' + str(self._zoom))
             self.sender.sendMessage(answerUnknownCommand, reply_markup = markup)
             return
 
@@ -161,8 +167,7 @@ class Handler(telepot.helper.ChatHandler):
 
         elif (content_type == 'text'):
                 if msg['text'] in zoomLevel:
-                    newZoom = int(zoomLevel[msg['text']])
-                    userdb.setZoom4Tele(teleId, newZoom)
+                    self._zoom = int(zoomLevel[msg['text']])
                     return
  
         self.sender.sendMessage(answerSelectRadius, reply_markup = markup)

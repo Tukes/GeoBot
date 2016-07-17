@@ -10,7 +10,6 @@ from urllib import request as req
 class UserDB:
     def __init__(self, dburl):
         self._dburl = dburl
-        print('Use user database at ' + self._dburl)
 
     #check preferred zoom level; return 0 if user cannot see map
     def zoom4Tele(self, telegramid):
