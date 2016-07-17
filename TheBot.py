@@ -107,8 +107,6 @@ class Handler(telepot.helper.ChatHandler):
         self._teleId = -1 #not known yet
 
     def on_close(self, exception):
-        if (self._teleId > 0) and (self._zoom > 0):
-            userdb.setZoom4Tele(self._teleId, self._zoom)
         print('Closing instance for ' + str(self._teleId))
 
     def on_chat_message(self, msg): #обработчик сообщений
@@ -125,13 +123,15 @@ class Handler(telepot.helper.ChatHandler):
 
         #ask db for user rights if not cached
         if (self._zoom < 0):
-            self._zoom = userdb.zoom4Tele(self._teleId)
+            self._zoom = userdb.access4Tele(self._teleId)
 
         #check if user meets minimum level of access
         if (self._zoom <= 0):
             print('User <' + str(self._teleId) + "/@" + teleUsername + '> tried to access bot, but was rejected with ' + str(self._zoom))
             self.sender.sendMessage(answerUnknownCommand, reply_markup = markup)
             return
+        else:
+            self._zoom = 15 #TODO reasonable default
 
         # Здесь можно обрабатывать команды вида /command
         """if content_type == 'text':
@@ -175,13 +175,17 @@ class Handler(telepot.helper.ChatHandler):
 #for debug on local machine
 TOKEN = input('Provide bot token: ')
 DBURL = input('Provide user DB URL: ')
+DBPORT = int(input('Provide user DB port: '))
+DBTOKEN = input('Provide user DB token: ')
 #for debug on server
 #TOKEN = sys.argv[1]
 #DBURL = sys.argv[2]
+#DBPORT = int(sys.argv[3])
+#DBTOKEN = sys.argv[4]
 
-userdb = UserDB(DBURL)
+userdb = UserDB(DBURL, DBPORT, DBTOKEN)
+
 bot = telepot.DelegatorBot(TOKEN, [
     (per_chat_id(), create_open(Handler, timeout=300)),
 ])
 bot.message_loop(run_forever='Listening ...')
-
