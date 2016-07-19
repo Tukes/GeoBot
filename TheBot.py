@@ -173,15 +173,15 @@ class Handler(telepot.helper.ChatHandler):
         self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
 
 #for debug on local machine
-TOKEN = input('Provide bot token: ')
-DBURL = input('Provide user DB URL: ')
-DBPORT = int(input('Provide user DB port: '))
-DBTOKEN = input('Provide user DB token: ')
+#TOKEN = input('Provide bot token: ')
+#DBURL = input('Provide user DB URL: ')
+#DBPORT = int(input('Provide user DB port: '))
+#DBTOKEN = input('Provide user DB token: ')
 #for debug on server
-#TOKEN = sys.argv[1]
-#DBURL = sys.argv[2]
-#DBPORT = int(sys.argv[3])
-#DBTOKEN = sys.argv[4]
+TOKEN = sys.argv[1]
+DBURL = sys.argv[2]
+DBPORT = int(sys.argv[3])
+DBTOKEN = sys.argv[4]
 
 userdb = UserDB(DBURL, DBPORT, DBTOKEN)
 
