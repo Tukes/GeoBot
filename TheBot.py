@@ -92,6 +92,7 @@ zoomOptions = {
 answerUnknownCommand = 'Неизвестная команда.' 
 answerQueryProcessing = 'Запрос обрабатывается. Пожалуйста подождите.'
 answerInstructions = 'Для того, чтобы получить снимок карты с отмеченными на нём метками, пришлите Location (для этого нужно нажать на скрепку(прикрепить) и там выбрать Location). После чего немного подождите.'
+answerAccessDenied = 'У вас нет доступа к функциям этого бота.'
 
 class Handler(telepot.helper.ChatHandler):
     def __init__(self, seed_tuple, timeout):
@@ -117,7 +118,7 @@ class Handler(telepot.helper.ChatHandler):
         #check if user meets minimum level of access
         if (self._access <= 0):
             print('User <' + str(teleId) + '> tried to access bot, but was rejected with ' + str(self._access))
-            self.sender.sendMessage(answerQueryProcessing)
+            self.sender.sendMessage(answerAccessDenied)
             return
 
         # Здесь можно обрабатывать команды вида /command
