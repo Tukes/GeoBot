@@ -3,12 +3,12 @@
 
 import re
 
-#for debuging on local machine
-Input = open('mapKML.kml', 'r', encoding="utf8")
-#for running on server
-#Input = open('mapKML.kml', 'r')
-Output = open('marks.txt', 'w')
+Input = open('mapKML.kml', 'r')
 inputString = Input.read()
+Input.close()
+
+Output = open('marks.txt', 'w')
+
 pattern = r'<Placemark>(.*?)</Placemark>'
 placemarksList = re.findall(pattern, inputString, flags=re.DOTALL)
 for c in placemarksList:
@@ -25,9 +25,6 @@ for c in placemarksList:
     else:
         description = descriptionT[0]
     coords = re.findall(r'<coordinates>(.*?)</coordinates>', c)[0].split(',')
-    #for debuging on local machine
-    print(coords[0] + " - " + coords[1]+ " - " + coords[2]+ " - " + name + " - " + description, file=Output)
-    #for running on server
-    #Output.write(coords[0] + " - " + coords[1]+ " - " + coords[2]+ " - " + name + " - " + description + "\n")
-Input.close()
+    Output.write(coords[0] + " - " + coords[1]+ " - " + coords[2]+ " - " + name + " - " + description + "\n")
+
 Output.close()

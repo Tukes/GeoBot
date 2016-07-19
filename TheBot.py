@@ -7,7 +7,6 @@ import time
 import sys
 
 #for python 3
-from urllib import request as req
 #for puthon 2
 #import urllib2 as req
 
@@ -134,10 +133,10 @@ class Handler(telepot.helper.ChatHandler):
             return
 
         # Здесь можно обрабатывать команды вида /command
-        """if content_type == 'text':
-            if msg['text'] == '/help':
-                self.sender.sendMessage("")
-                return"""
+        if content_type == 'text':
+            if (msg['text'] == '/start') or (msg['text'] == '/help'):
+                self.sender.sendMessage("Для того, чтобы получить снимок карты с отмеченными на нём метками, пришлите Location (для этого нужно нажать на скрепку(прикрепить) и там выбрать Location), затем задайте интересующий вас радиус (300м, 700м, 1.2км или же 5км). После чего немного подождите.")
+                return
         #
 
         if (content_type == 'location'):
