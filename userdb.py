@@ -15,19 +15,20 @@ class UserDB:
     def access4Tele(self, telegramid): 
         print('Check access of ' + str(telegramid))
 
-        #TODO surround with exception handling
-        now = datetime.datetime.now()
-        accessToken = md5((eval(self._dbtoken)).encode('utf-8')).hexdigest()
+        try:
+            now = datetime.datetime.now()
+            accessToken = md5((eval(self._dbtoken)).encode('utf-8')).hexdigest()
         
-        sock = socket.socket()
-        sock.connect((self._dburl, self._dbport))
-        sock.send(('%s %s' % (accessToken, telegramid)).encode('utf-8'))
-        result = sock.recv(1024).decode('utf-8')
-        sock.close()
+            sock = socket.socket()
+            sock.connect((self._dburl, self._dbport))
+            sock.send(('%s %s' % (accessToken, telegramid)).encode('utf-8'))
+            result = sock.recv(1024).decode('utf-8')
+            sock.close()
         
-        print('Access check returned ' + result)
-        return int(result)
-        #TODO until here
+            print('Access check returned ' + result)
+            return int(result)
+        except:
+            pass
 
         print('Access granted by default')
         return 1
