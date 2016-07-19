@@ -28,3 +28,4 @@ for c in placemarksList:
     Output.write(coords[0] + " - " + coords[1]+ " - " + coords[2]+ " - " + name + " - " + description + "\n")
 
 Output.close()
+

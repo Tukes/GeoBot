@@ -7,6 +7,7 @@ import time
 import sys
 
 #for python 3
+from urllib import request as req
 #for puthon 2
 #import urllib2 as req
 
@@ -171,12 +172,6 @@ class Handler(telepot.helper.ChatHandler):
  
         self.sender.sendMessage(answerSelectRadius, reply_markup = markup)
 
-#for debug on local machine
-#TOKEN = input('Provide bot token: ')
-#DBURL = input('Provide user DB URL: ')
-#DBPORT = int(input('Provide user DB port: '))
-#DBTOKEN = input('Provide user DB token: ')
-#for debug on server
 TOKEN = sys.argv[1]
 DBURL = sys.argv[2]
 DBPORT = int(sys.argv[3])
@@ -188,3 +183,4 @@ bot = telepot.DelegatorBot(TOKEN, [
     (per_chat_id(), create_open(Handler, timeout=300)),
 ])
 bot.message_loop(run_forever='Listening ...')
+
