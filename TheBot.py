@@ -53,7 +53,6 @@ for c in markerText:
     marker.info = coords[4]
     markers.append(marker)
 
-
 #template for request to Google Maps API
 requestStart = "https://maps.googleapis.com/maps/api/staticmap?center=" #lat, lon
 requestEnd = "&zoom=&size=640x640&scale=2&markers=color:red"
@@ -98,33 +97,26 @@ class Handler(telepot.helper.ChatHandler):
     def __init__(self, seed_tuple, timeout):
         super(Handler, self).__init__(seed_tuple, timeout)
         self._access = -1  #not verified yet
-        self._teleId = -1  #not known yet
         self._request = '' #request to maps API
         self.lat0 = 0.0    #last user coordinates
-        self.lon0 = 0.0
+        self.lon0 = 0.0    #last user coordinates
         self.option = 1    #replaces zoom. 0-3, 1 is for zoom = 15, dist = 950
         self.editor = None #for editing messages
         self.localMarkersCount = 0 #I need it, trust me. Ohh, I mean it's needed to remove inlineKeyboard when new screen is requested. Otherwise, UnboundLocalError: local variable 'localMarkersCount' gonna be raised 
 
     def on_chat_message(self, msg):
         content_type, chat_type, chat_id = telepot.glance(msg)
+        teleId = msg['from']['id'] #user id independent of source chat
 
-        #get them once, reuse through all routine
-        self._teleId = msg['from']['id']
-        teleUsername = ''
-
-        if ('username' in msg['from']):
-            teleUsername = msg['from']['username']
-
-        print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + ' <' + str(self._teleId) + "/@" + teleUsername + "> " + content_type)
+        print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ' <' + str(teleId) + '> ' + content_type)
 
         #ask db for user rights if not cached
         if (self._access < 0):
-            self._access = userdb.access4Tele(self._teleId)
+            self._access = userdb.access4Tele(teleId)
 
         #check if user meets minimum level of access
         if (self._access <= 0):
-            print('User <' + str(self._teleId) + "/@" + teleUsername + '> tried to access bot, but was rejected with ' + str(self._access))
+            print('User <' + str(teleId) + '> tried to access bot, but was rejected with ' + str(self._access))
             self.sender.sendMessage(answerQueryProcessing)
             return
 
@@ -170,7 +162,6 @@ class Handler(telepot.helper.ChatHandler):
         #Nothing happend -> unknownCommand
         self.sender.sendMessage(answerUnknownCommand)
 
-
     def on_callback_query(self, data):
         if data['data'] == '+':
             if self.option > 0:
@@ -183,7 +174,7 @@ class Handler(telepot.helper.ChatHandler):
                 #Change the info in message with inline keyboard
                 self.editor.editMessageText('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.', reply_markup = inlineKeyboard)
             return
-        
+
         elif data['data'] == '-':
             if self.option < 3:
                 self.option += 1
@@ -195,16 +186,16 @@ class Handler(telepot.helper.ChatHandler):
                 #Change the info in message with inline keyboard
                 self.editor.editMessageText('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.', reply_markup = inlineKeyboard)
             return
-        
+
         elif data['data'] == 'screen':
             #Remove inline keyboard in message with inline keyboard
             self.editor.editMessageText('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
 
             self.sender.sendMessage(answerQueryProcessing)
-            
+
             localMarkers = []
             self.localMarkersCount = 0
-            
+
             for c in markers:
                 if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
                     localMarkers.append(c)
@@ -226,10 +217,6 @@ class Handler(telepot.helper.ChatHandler):
         #remove inline keyboard on timeout if exists
         if self.editor is not None:
             self.editor.editMessageText('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
-        print('Closing instance for ' + str(self._teleId))
-
-
-
 
 TOKEN = sys.argv[1]
 DBURL = sys.argv[2]
