@@ -17,6 +17,10 @@ def xi(phi, e):
     result = result - (math.pi / 2.0)
     return result
 
+def m(phi, e):
+    eSinPhi = e * math.sin(phi)
+    result = (math.cos(phi))/(math.pow(1.0 - (eSinPthi * eSinPhi), 0.5))
+
 class StereoProjection:
     def __init__(self, lat0Str, lon0Str): #shirota-dolgota phi-lambda
         self.lat0 = mapDegreeToRad(lat0Str)
@@ -39,6 +43,10 @@ class StereoProjection:
         xi0 = xi(self.lat0, e)
         xi1 = xi(lat1, e)
 
+        m0 = m(self.lat0, e)
+        m1 = m(lat1, e)
+
+        
 
 if __name__ == "__main__":
     stereo = StereoProjection("59-56-00", "30-19-00") #TODO define simple format for deg-min-sec
