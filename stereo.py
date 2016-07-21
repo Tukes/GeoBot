@@ -28,43 +28,36 @@ class StereoProjection:
     def __init__(self, lat0Str, lon0Str): #shirota-dolgota phi-lambda N&E - positive, S&W - negative
         self.lat0 = mapDegreeToRad(lat0Str)
         self.lon0 = mapDegreeToRad(lon0Str)
+        self.a = 6378206.4
+        self.e = 0.0822719
+        self.k0 = 0.9999
+
+        xi0 = xi(self.lat0, self.e)
+
+        self.m0 = m(self.lat0, self.e)
+
+        self.sinXi0 = math.sin(xi0)
+        self.cosXi0 = math.cos(xi0)
 
     def geoToStereo(self, latStr, lonStr):
         lat1 = mapDegreeToRad(latStr)
         lon1 = mapDegreeToRad(lonStr)
 
-        #define ellipsoid parameters
-        #Clarke 1866 for sake of numeric examples
-        a = 6378206.4
-        e = 0.0822719
-        k0 = 0.9999
-        #Regular WGS-84
-        #TODO a
-        #TODO e
-        #TODO k0
-
-        #TODO move to ctor all wtf0
-        xi0 = xi(self.lat0, e)
-        xi1 = xi(lat1, e)
-
-        m0 = m(self.lat0, e)
-        m1 = m(lat1, e)
+        xi1 = xi(lat1, self.e)
+        m1 = m(lat1, self.e)
 
         sinXi1 = math.sin(xi1)
         cosXi1 = math.cos(xi1)
-        
-        sinXi0 = math.sin(xi0)
-        cosXi0 = math.cos(xi0)
         
         dLambda = lon1 - self.lon0
         sinDLambda = math.sin(dLambda)
         cosDLambda = math.cos(dLambda)
 
-        A = (2.0 * a * k0 * m0)/(cosXi0 * (1.0 + sinXi0 * sinXi1 + cosXi0 * cosXi1 * cosDLambda))
+        A = (2.0 * self.a * self.k0 * self.m0)/(self.cosXi0 * (1.0 + self.sinXi0 * sinXi1 + self.cosXi0 * cosXi1 * cosDLambda))
 
         x = A * cosXi1 * sinDLambda
-        y = A * (cosXi0 * sinXi1 - sinXi0 * cosXi1 * cosDLambda)
-        k = (A * cosXi1)/(a * m1)
+        y = A * (self.cosXi0 * sinXi1 - self.sinXi0 * cosXi1 * cosDLambda)
+        k = (A * cosXi1)/(self.a * m1)
 
         return (x, y, k)
         
