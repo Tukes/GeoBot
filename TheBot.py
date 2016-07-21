@@ -4,7 +4,7 @@
 import sys
 import datetime
 import codecs
-from urllib import request as req
+from urllib import request
 
 #Telepot
 import telepot
@@ -21,14 +21,17 @@ class Marker:
         self.lon = 0.0
         self.name = ''
         self.info = ''
+    #
 
     def relevant(self, lat0, lon0, dist):
         if (distance(self.lat, self.lon, lat0, lon0) + 20) < dist: #plus 20 because of inaccuracy
             return True
         return False
+    #
 
     def requestString(self):
         return '%7C' + str(self.lat) + ',' + str(self.lon)
+    #
 
 markerFile = codecs.open('marks.txt', 'r', 'utf-8')
 markerText = markerFile.readlines()
@@ -49,7 +52,7 @@ print('Starting bot with ' + str(len(markers)) + ' points')
 
 #template for request to Google Maps API
 RequestStart = 'https://maps.googleapis.com/maps/api/staticmap?center=' #lat, lon
-RequestEnd   = '&zoom=&size=640x640&scale=2&markers=color:red'
+RequestEnd   = '&size=640x640&scale=2&markers=color:red'
 
 #Create inline keyboard
 ButtonMinus = {
@@ -83,11 +86,11 @@ zoomOptions = {
     'distStr' : ['2км', '950м', '470м', '240м']
     }
 
-AnswerUnknownCommand = 'Неизвестная команда.'
-AnswerQueryProcessing = 'Запрос обрабатывается. Пожалуйста подождите.'
-AnswerInstructions = 'Для того, чтобы получить снимок карты с отмеченными на нём метками, пришлите Location (для этого нужно нажать на скрепку(прикрепить) и там выбрать Location). После чего немного подождите.'
-AnswerAccessDenied = 'У вас нет доступа к функциям этого бота.'
-AnswerInline = 'Радиус: {dist}\nМеток в радиусе: {num}\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.'
+AnswerUnknownCommand    = 'Неизвестная команда.'
+AnswerQueryProcessing   = 'Запрос обрабатывается. Пожалуйста подождите.'
+AnswerInstructions      = 'Для того, чтобы получить снимок карты с отмеченными на нём метками, пришлите Location (для этого нужно нажать на скрепку(прикрепить) и там выбрать Location). После чего немного подождите.'
+AnswerAccessDenied      = 'У вас нет доступа к функциям этого бота.'
+AnswerInline            = 'Радиус: {dist}\nМеток в радиусе: {num}\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.'
 
 class Handler(telepot.helper.ChatHandler):
     def __init__(self, seed_tuple, timeout):
@@ -95,25 +98,30 @@ class Handler(telepot.helper.ChatHandler):
         self._access = -1  #not verified yet
         self.lat0 = 0.0    #last user coordinates
         self.lon0 = 0.0    #last user coordinates
-        self.option = 1    #replaces zoom. 0-3, 1 is for zoom = 15, dist = 950
+        self.option = 1    #last user zoom option
         self.editor = None #for editing messages
+    #
 
     def removeInline(self):
         if self.editor is not None:
             self.editor.editMessageReplyMarkup(reply_markup = None)
             self.editor = None
+    #
 
     def sendSimple(self, msg):
         self.removeInline()
         self.sender.sendMessage(msg, reply_markup = None)
+    #
 
     def sendWithInline(self, msg):
         msgHandle = self.sender.sendMessage(msg, reply_markup = InlineKeyboard)
         self.editor = telepot.helper.Editor(bot, msgHandle)
+    #
 
     def editInline(self, inlineMsg):
         if self.editor is not None:
             self.editor.editMessageText(inlineMsg, reply_markup = InlineKeyboard)
+    #
 
     def mapRoutine(self):
         #remove inline keyboard from old message if exists
@@ -128,13 +136,11 @@ class Handler(telepot.helper.ChatHandler):
 
         #make request string for google maps api for picture
         #see docs at https://developers.google.com/maps/documentation/static-maps/intro
-        request = RequestStart + str(self.lat0) + ',' + str(self.lon0) + RequestEnd
+        requestUrl = RequestStart + str(self.lat0) + ',' + str(self.lon0) + '&zoom=' + zoomOptions['zoom'][self.option] + RequestEnd
         for c in localMarkers:
-            request += c.requestString()
+            requestUrl += c.requestString()
 
-        request = request.replace('zoom=', 'zoom=' + zoomOptions['zoom'][self.option])
-
-        response = req.urlopen(request)
+        response = request.urlopen(requestUrl)
         screen = ('screen.png', response) #telegram API require filename
         self.sender.sendPhoto(screen)
 
@@ -202,7 +208,7 @@ class Handler(telepot.helper.ChatHandler):
                 #Change the info in message with inline keyboard
                 self.editInline(AnswerInline.format(dist = zoomOptions['distStr'][self.option], num = localMarkersCount))
             return
-
+        #
         elif data['data'] == 'screen':
             self.mapRoutine()
             return
@@ -213,14 +219,14 @@ class Handler(telepot.helper.ChatHandler):
         self.removeInline()
     #
 
-TOKEN = sys.argv[1]
-DBURL = sys.argv[2]
-DBPORT = int(sys.argv[3])
+TOKEN   = sys.argv[1]
+DBURL   = sys.argv[2]
+DBPORT  = int(sys.argv[3])
 DBTOKEN = sys.argv[4]
 
 userdb = UserDB(DBURL, DBPORT, DBTOKEN)
 
 bot = telepot.DelegatorBot(TOKEN, [
-    (per_chat_id(), create_open(Handler, timeout=300)),
+    (per_chat_id(), create_open(Handler, timeout = 300)),
 ])
-bot.message_loop(run_forever='Listening ...')
+bot.message_loop(run_forever = 'Listening...')
