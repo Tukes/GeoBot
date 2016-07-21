@@ -115,7 +115,7 @@ class Handler(telepot.helper.ChatHandler):
 
     def sendWithInline(self, msg):
         msgHandle = self.sender.sendMessage(msg, reply_markup = InlineKeyboard)
-        self.editor = telepot.helper.Editor(bot, msgHandle)
+        self.editor = telepot.helper.Editor(self.bot, msgHandle)
     #
 
     def editInline(self, inlineMsg):
@@ -187,15 +187,17 @@ class Handler(telepot.helper.ChatHandler):
         self.sendSimple(AnswerUnknownCommand)
     #
 
-    def on_callback_query(self, data):
-        if data['data'] == '+' or data['data'] == '-':
+    def on_callback_query(self, msg):
+        query_id, from_id, data = telepot.glance(msg, flavor = 'callback_query')
+
+        if data == '+' or data == '-':
             needUpdate = False
 
-            if data['data'] == '+' and self.option > 0:
+            if data == '+' and self.option > 0:
                 self.option -= 1
                 needUpdate = True
 
-            if data['data'] == '-' and self.option < 3:
+            if data == '-' and self.option < 3:
                 self.option += 1
                 needUpdate = True
 
@@ -207,12 +209,12 @@ class Handler(telepot.helper.ChatHandler):
 
                 #Change the info in message with inline keyboard
                 self.editInline(AnswerInline.format(dist = zoomOptions['distStr'][self.option], num = localMarkersCount))
-            return
         #
-        elif data['data'] == 'screen':
+        elif data == 'screen':
             self.mapRoutine()
-            return
         #
+
+        self.bot.answerCallbackQuery(query_id, text = None)
     #
 
     def on_close(self, exception):
