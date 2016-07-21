@@ -99,18 +99,16 @@ class Handler(telepot.helper.ChatHandler):
     def __init__(self, seed_tuple, timeout):
         super(Handler, self).__init__(seed_tuple, timeout)
         self._access = -1  #not verified yet
-        self._request = '' #request to maps API
         self.lat0 = 0.0    #last user coordinates
         self.lon0 = 0.0    #last user coordinates
         self.option = 1    #replaces zoom. 0-3, 1 is for zoom = 15, dist = 950
         self.editor = None #for editing messages
-        self.localMarkersCount = 0 #I need it, trust me. Ohh, I mean it's needed to remove inlineKeyboard when new screen is requested. Otherwise, UnboundLocalError: local variable 'localMarkersCount' gonna be raised
 
     def removeInline(self):
         if self.editor is not None:
             self.editor.editMessageReplyMarkup(reply_markup = None)
-            self.editor = None        
-        
+            self.editor = None
+
     def sendSimple(self, msg):
         self.removeInline()
         self.sender.sendMessage(msg, reply_markup = None)
@@ -122,6 +120,32 @@ class Handler(telepot.helper.ChatHandler):
     def editInline(self, inlineMsg):
         if self.editor is not None:
             self.editor.editMessageText(inlineMsg, reply_markup = inlineKeyboard)
+
+    def mapRoutine(self):
+        #remove inline keyboard from old message if exists
+        self.sendSimple(answerQueryProcessing)
+
+        #form short list of markers nearby to meet google static map API limit of 2048 chars
+        localMarkers = []
+
+        for c in markers:
+            if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
+                localMarkers.append(c)
+
+        #make request string for google maps api for picture
+        #see docs at https://developers.google.com/maps/documentation/static-maps/intro
+        request = requestStart + str(self.lat0) + ',' + str(self.lon0) + requestEnd
+        for c in localMarkers:
+            request += c.requestString()
+
+        request = request.replace("zoom=", "zoom=" + zoomOptions['zoom'][self.option])
+
+        response = req.urlopen(request)
+        screen = ("screen.png", response) #telegram API require filename
+        self.sender.sendPhoto(screen)
+
+        self.sendWithInline('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(len(localMarkers)) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
+    #
 
     def on_chat_message(self, msg):
         content_type, chat_type, chat_id = telepot.glance(msg)
@@ -150,32 +174,12 @@ class Handler(telepot.helper.ChatHandler):
 
         #handle location
         if (content_type == 'location'):
-            #remove inline keyboard from old message if exists
-            self.sendSimple(answerQueryProcessing)
 
             self.lat0 = float(msg['location']['latitude'])
             self.lon0 = float(msg['location']['longitude'])
 
-            #form short list of markers nearby to meet google static map API limit of 2048 chars
-            localMarkers = []
-            self.localMarkersCount = 0
+            self.mapRoutine()
 
-            for c in markers:
-                if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
-                    localMarkers.append(c)
-                    self.localMarkersCount += 1 #sad that you cant use self.localMarkersCount++ in python :c
-
-            #make request string for google maps api for picture
-            #see docs at https://developers.google.com/maps/documentation/static-maps/intro
-            self._request = requestStart + str(self.lat0) + ',' + str(self.lon0) + requestEnd
-            for c in localMarkers:
-                self._request = self._request + c.requestString()
-
-            response = req.urlopen(self._request.replace("zoom=","zoom="+zoomOptions['zoom'][self.option]))
-            screen = ("screen.png", response) #В telegram api обязательно нужно, чтобы у файла было название
-            self.sender.sendPhoto(screen)
-            #self.editor to sent edit message
-            self.sendWithInline('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
             return
         #
 
@@ -206,26 +210,7 @@ class Handler(telepot.helper.ChatHandler):
             return
 
         elif data['data'] == 'screen':
-            #Remove inline keyboard in message with inline keyboard
-            self.sendSimple(answerQueryProcessing)
-
-            localMarkers = []
-            self.localMarkersCount = 0
-
-            for c in markers:
-                if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
-                    localMarkers.append(c)
-                    self.localMarkersCount += 1
-            self._request = requestStart + str(self.lat0) + ',' + str(self.lon0) + requestEnd
-            for c in localMarkers:
-                self._request = self._request + c.requestString()
-
-            response = req.urlopen(self._request.replace("zoom=","zoom="+zoomOptions['zoom'][self.option]))
-            screen = ("screen.png", response)
-            self.sender.sendPhoto(screen)
-
-            #new message to edit
-            self.sendWithInline('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
+            self.mapRoutine()
             return
         #
     #
