@@ -3,21 +3,18 @@
 
 import math
 
-def _xi_(phi, e):
+def _m_xi_(phi, e):
     sinPhi = math.sin(phi)
     eSinPhi = e * sinPhi
-    result = (1.0 - eSinPhi)/(1.0 + eSinPhi)
-    result = math.pow(result, e)
-    result = ((1.0 + sinPhi)/(1.0 - sinPhi)) * result
-    result = math.sqrt(result)
-    result = 2.0 * math.atan(result)
-    result = result - (math.pi / 2.0)
-    return result
-
-def _m_(phi, e):
-    eSinPhi = e * math.sin(phi)
-    result = (math.cos(phi))/(math.sqrt(1.0 - (eSinPhi * eSinPhi)))
-    return result
+    
+    m = (math.cos(phi))/(math.sqrt(1.0 - (eSinPhi * eSinPhi)))
+    
+    xi = (1.0 - eSinPhi)/(1.0 + eSinPhi)
+    xi = math.pow(xi, e)
+    xi = ((1.0 + sinPhi)/(1.0 - sinPhi)) * xi
+    xi = math.sqrt(xi)
+    xi = 2.0 * math.atan(xi) - (math.pi / 2.0)
+    return (m, xi)
 
 class StereoProjection:
     def __init__(self, lat0, lon0): #shirota-dolgota phi-lambda N&E - positive, S&W - negative
@@ -27,9 +24,8 @@ class StereoProjection:
         self.e = 0.0822719
         self.k0 = 0.9999
 
-        self.m0 = _m_(self.lat0, self.e)
+        self.m0, xi0 = _m_xi_(self.lat0, self.e)
 
-        xi0 = _xi_(self.lat0, self.e)
         self.sinXi0 = math.sin(xi0)
         self.cosXi0 = math.cos(xi0)
 
@@ -37,8 +33,7 @@ class StereoProjection:
         lat1 = math.radians(lat1)
         lon1 = math.radians(lon1)
 
-        xi1 = _xi_(lat1, self.e)
-        m1 = _m_(lat1, self.e)
+        m1, xi1 = _m_xi_(lat1, self.e)
 
         sinXi1 = math.sin(xi1)
         cosXi1 = math.cos(xi1)
