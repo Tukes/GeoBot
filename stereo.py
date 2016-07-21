@@ -7,11 +7,11 @@ def _m_xi_(phi, e):
     sinPhi = math.sin(phi)
     eSinPhi = e * sinPhi
     
-    m = math.cos(phi)/math.sqrt(1.0 - eSinPhi * eSinPhi)
+    m = math.cos(phi) / math.sqrt(1.0 - eSinPhi * eSinPhi)
     
-    xi = (1.0 - eSinPhi)/(1.0 + eSinPhi)
+    xi = (1.0 - eSinPhi) / (1.0 + eSinPhi)
     xi = math.pow(xi, e)
-    xi = (1.0 + sinPhi)/(1.0 - sinPhi) * xi
+    xi = xi * (1.0 + sinPhi) / (1.0 - sinPhi)
     xi = math.sqrt(xi)
     xi = 2.0 * math.atan(xi) - math.pi / 2.0
     return (m, xi)
