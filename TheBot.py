@@ -144,10 +144,14 @@ class Handler(telepot.helper.ChatHandler):
             localMarkers = []
             self.localMarkersCount = 0
 
+            markersProcessed = 0
+            print(datetime.datetime.now().strftime("%H:%M:%S.%f") + ' Begin')
             for c in markers:
+                markersProcessed += 1
                 if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
                     localMarkers.append(c)
                     self.localMarkersCount += 1 #sad that you cant use self.localMarkersCount++ in python :c
+            print(datetime.datetime.now().strftime("%H:%M:%S.%f") + ' End: ' + str(markersProcessed))
 
             #make request string for google maps api for picture
             #see docs at https://developers.google.com/maps/documentation/static-maps/intro
