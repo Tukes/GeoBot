@@ -3,6 +3,7 @@
 
 import sys
 import datetime
+import codecs
 
 #import Telepot
 import telepot
@@ -38,7 +39,7 @@ class Marker:
 #TODO skip manual parsing
 #TODO add command to reload
 #TODO rights to reload?
-markerFile = open('marks.txt', 'r')
+markerFile = codecs.open('marks.txt', 'r', 'utf-8')
 markerText = markerFile.readlines()
 markerFile.close()
 
@@ -52,6 +53,8 @@ for c in markerText:
     marker.name = coords[3]
     marker.info = coords[4]
     markers.append(marker)
+
+print('Starting bot with ' + str(len(markers)) + ' points')
 
 #template for request to Google Maps API
 requestStart = "https://maps.googleapis.com/maps/api/staticmap?center=" #lat, lon
