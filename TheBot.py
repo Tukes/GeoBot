@@ -4,13 +4,11 @@
 import sys
 import datetime
 import codecs
+from urllib import request as req
 
-#import Telepot
+#Telepot
 import telepot
 from telepot.delegate import per_chat_id, create_open
-
-#for python 3
-from urllib import request as req
 
 #local stuff
 from userdb import UserDB #to check user access from remote database
@@ -21,7 +19,6 @@ class Marker:
     def __init__(self):
         self.lat = 0.0
         self.lon = 0.0
-        self.hei = 0.0
         self.name = ''
         self.info = ''
 
@@ -33,21 +30,17 @@ class Marker:
     def requestString(self):
         return '%7C' + str(self.lat) + ',' + str(self.lon)
 
-#Load markers from file, format lon,lat,hei\nlon,lat,hei ...
-#TODO skip manual parsing
-#TODO add command to reload
-#TODO rights to reload?
 markerFile = codecs.open('marks.txt', 'r', 'utf-8')
 markerText = markerFile.readlines()
 markerFile.close()
 
 markers = []
 for c in markerText:
-    coords = c.split(' - ') #TODO better parsing
+    #TODO better parsing
+    coords = c.split(' - ')
     marker = Marker()
     marker.lat = float(coords[1])
     marker.lon = float(coords[0])
-    marker.hei = float(coords[2])
     marker.name = coords[3]
     marker.info = coords[4]
     markers.append(marker)
@@ -55,25 +48,25 @@ for c in markerText:
 print('Starting bot with ' + str(len(markers)) + ' points')
 
 #template for request to Google Maps API
-requestStart = "https://maps.googleapis.com/maps/api/staticmap?center=" #lat, lon
-requestEnd = "&zoom=&size=640x640&scale=2&markers=color:red"
+RequestStart = 'https://maps.googleapis.com/maps/api/staticmap?center=' #lat, lon
+RequestEnd   = '&zoom=&size=640x640&scale=2&markers=color:red'
 
 #Create inline keyboard
-bMinus = {
+ButtonMinus = {
     'text' : '-',
-    'callback_data' : '-',
+    'callback_data' : '-'
     }
-bPlus = {
+ButtonPlus = {
     'text' : '+',
-    'callback_data' : '+',
+    'callback_data' : '+'
     }
-newScreen = {
+ButtonNewScreen = {
     'text' : 'Новый снимок',
-    'callback_data' : 'screen',
+    'callback_data' : 'screen'
     }
 
-inlineKeyboard = {
-    'inline_keyboard' : [[bMinus, bPlus], [newScreen]]
+InlineKeyboard = {
+    'inline_keyboard' : [[ButtonMinus, ButtonPlus], [ButtonNewScreen]]
     }
 
 """ sad that zoom should be an integer for google map api. Don't delete this dict for using maybe in future
@@ -85,15 +78,16 @@ zoomOptions = {         #the dict, which matches 3 things: zoomLevel, distanceIn
 
 #the dict, which matches 3 things: zoomLevel, distanceInt, distanceString
 zoomOptions = {
-    'zoom' : ['14', '15', '16', '17',],
-    'distInt' : [2000, 950, 470, 240,],
-    'distStr' : ['2км', '950м', '470м',  '240м',],
+    'zoom'    : ['14',  '15',   '16',   '17'  ],
+    'distInt' : [ 2000,  950,    470,    240  ],
+    'distStr' : ['2км', '950м', '470м', '240м']
     }
 
-answerUnknownCommand = 'Неизвестная команда.'
-answerQueryProcessing = 'Запрос обрабатывается. Пожалуйста подождите.'
-answerInstructions = 'Для того, чтобы получить снимок карты с отмеченными на нём метками, пришлите Location (для этого нужно нажать на скрепку(прикрепить) и там выбрать Location). После чего немного подождите.'
-answerAccessDenied = 'У вас нет доступа к функциям этого бота.'
+AnswerUnknownCommand = 'Неизвестная команда.'
+AnswerQueryProcessing = 'Запрос обрабатывается. Пожалуйста подождите.'
+AnswerInstructions = 'Для того, чтобы получить снимок карты с отмеченными на нём метками, пришлите Location (для этого нужно нажать на скрепку(прикрепить) и там выбрать Location). После чего немного подождите.'
+AnswerAccessDenied = 'У вас нет доступа к функциям этого бота.'
+AnswerInline = 'Радиус: {dist}\nМеток в радиусе: {num}\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.'
 
 class Handler(telepot.helper.ChatHandler):
     def __init__(self, seed_tuple, timeout):
@@ -114,16 +108,16 @@ class Handler(telepot.helper.ChatHandler):
         self.sender.sendMessage(msg, reply_markup = None)
 
     def sendWithInline(self, msg):
-        msgHandle = self.sender.sendMessage(msg, reply_markup = inlineKeyboard)
+        msgHandle = self.sender.sendMessage(msg, reply_markup = InlineKeyboard)
         self.editor = telepot.helper.Editor(bot, msgHandle)
 
     def editInline(self, inlineMsg):
         if self.editor is not None:
-            self.editor.editMessageText(inlineMsg, reply_markup = inlineKeyboard)
+            self.editor.editMessageText(inlineMsg, reply_markup = InlineKeyboard)
 
     def mapRoutine(self):
         #remove inline keyboard from old message if exists
-        self.sendSimple(answerQueryProcessing)
+        self.sendSimple(AnswerQueryProcessing)
 
         #form short list of markers nearby to meet google static map API limit of 2048 chars
         localMarkers = []
@@ -134,24 +128,24 @@ class Handler(telepot.helper.ChatHandler):
 
         #make request string for google maps api for picture
         #see docs at https://developers.google.com/maps/documentation/static-maps/intro
-        request = requestStart + str(self.lat0) + ',' + str(self.lon0) + requestEnd
+        request = RequestStart + str(self.lat0) + ',' + str(self.lon0) + RequestEnd
         for c in localMarkers:
             request += c.requestString()
 
-        request = request.replace("zoom=", "zoom=" + zoomOptions['zoom'][self.option])
+        request = request.replace('zoom=', 'zoom=' + zoomOptions['zoom'][self.option])
 
         response = req.urlopen(request)
-        screen = ("screen.png", response) #telegram API require filename
+        screen = ('screen.png', response) #telegram API require filename
         self.sender.sendPhoto(screen)
 
-        self.sendWithInline('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(len(localMarkers)) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
+        self.sendWithInline(AnswerInline.format(dist = zoomOptions['distStr'][self.option], num = len(localMarkers)))
     #
 
     def on_chat_message(self, msg):
         content_type, chat_type, chat_id = telepot.glance(msg)
         teleId = msg['from']['id'] #user id independent of source chat
 
-        print(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ' <' + str(teleId) + '> ' + content_type)
+        print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ' <' + str(teleId) + '> ' + content_type)
 
         #ask db for user rights if not cached
         if (self._access < 0):
@@ -161,14 +155,14 @@ class Handler(telepot.helper.ChatHandler):
         #check if user meets minimum level of access
         if (self._access <= 0):
             print('User <' + str(teleId) + '> tried to access bot, but was rejected with ' + str(self._access))
-            self.sendSimple(answerAccessDenied)
+            self.sendSimple(AnswerAccessDenied)
             return
         #
 
         #handle simple /commands
         if content_type == 'text':
             if (msg['text'] == '/start') or (msg['text'] == '/help'):
-                self.sendSimple(answerInstructions)
+                self.sendSimple(AnswerInstructions)
                 return
         #
 
@@ -184,7 +178,7 @@ class Handler(telepot.helper.ChatHandler):
         #
 
         #Nothing happend -> unknownCommand
-        self.sendSimple(answerUnknownCommand)
+        self.sendSimple(AnswerUnknownCommand)
     #
 
     def on_callback_query(self, data):
@@ -200,13 +194,13 @@ class Handler(telepot.helper.ChatHandler):
                 needUpdate = True
 
             if needUpdate:
-                self.localMarkersCount = 0
+                localMarkersCount = 0
                 for c in markers:
                     if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
-                        self.localMarkersCount += 1
+                        localMarkersCount += 1
 
                 #Change the info in message with inline keyboard
-                self.editInline('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
+                self.editInline(AnswerInline.format(dist = zoomOptions['distStr'][self.option], num = localMarkersCount))
             return
 
         elif data['data'] == 'screen':
