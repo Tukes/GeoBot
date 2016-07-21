@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import sys
@@ -11,8 +11,6 @@ from telepot.delegate import per_chat_id, create_open
 
 #for python 3
 from urllib import request as req
-#for puthon 2
-#from urllib2 import request as req
 
 #local stuff
 from userdb import UserDB #to check user access from remote database
@@ -28,7 +26,7 @@ class Marker:
         self.info = ''
 
     def relevant(self, lat0, lon0, dist):
-        if (distance(self.lat, self.lon, lat0, lon0) + 20) < dist: #plus 20 because of inaccuracy 
+        if (distance(self.lat, self.lon, lat0, lon0) + 20) < dist: #plus 20 because of inaccuracy
             return True
         return False
 
@@ -79,20 +77,20 @@ inlineKeyboard = {
     }
 
 """ sad that zoom should be an integer for google map api. Don't delete this dict for using maybe in future
-zoomOptions = {         #the dict, which matches 3 things: zoomLevel, distanceInt, distanceString 
+zoomOptions = {         #the dict, which matches 3 things: zoomLevel, distanceInt, distanceString
     'zoom' : ['14', '14.25', '14.5', '14.75', '15', '15.25', '15.5', '15.75', '16', '16.25', '16.5', '16.75', '17',],
     'distInt' : [2000, 1500, 1300, 1100, 950, 800, 675, 570, 470, 400, 340, 280, 240,],
     'distStr' : ['2км', '1.5км', '1.3км', '1.1км', '950м', '800м', '675м', '570м', '470м', '400м', '340м', '280м', '240м',],
     }"""
 
-#the dict, which matches 3 things: zoomLevel, distanceInt, distanceString 
+#the dict, which matches 3 things: zoomLevel, distanceInt, distanceString
 zoomOptions = {
     'zoom' : ['14', '15', '16', '17',],
     'distInt' : [2000, 950, 470, 240,],
     'distStr' : ['2км', '950м', '470м',  '240м',],
     }
 
-answerUnknownCommand = 'Неизвестная команда.' 
+answerUnknownCommand = 'Неизвестная команда.'
 answerQueryProcessing = 'Запрос обрабатывается. Пожалуйста подождите.'
 answerInstructions = 'Для того, чтобы получить снимок карты с отмеченными на нём метками, пришлите Location (для этого нужно нажать на скрепку(прикрепить) и там выбрать Location). После чего немного подождите.'
 answerAccessDenied = 'У вас нет доступа к функциям этого бота.'
@@ -106,7 +104,24 @@ class Handler(telepot.helper.ChatHandler):
         self.lon0 = 0.0    #last user coordinates
         self.option = 1    #replaces zoom. 0-3, 1 is for zoom = 15, dist = 950
         self.editor = None #for editing messages
-        self.localMarkersCount = 0 #I need it, trust me. Ohh, I mean it's needed to remove inlineKeyboard when new screen is requested. Otherwise, UnboundLocalError: local variable 'localMarkersCount' gonna be raised 
+        self.localMarkersCount = 0 #I need it, trust me. Ohh, I mean it's needed to remove inlineKeyboard when new screen is requested. Otherwise, UnboundLocalError: local variable 'localMarkersCount' gonna be raised
+
+    def removeInline(self):
+        if self.editor is not None:
+            self.editor.editMessageReplyMarkup(reply_markup = None)
+            self.editor = None        
+        
+    def sendSimple(self, msg):
+        self.removeInline()
+        self.sender.sendMessage(msg, reply_markup = None)
+
+    def sendWithInline(self, msg):
+        msgHandle = self.sender.sendMessage(msg, reply_markup = inlineKeyboard)
+        self.editor = telepot.helper.Editor(bot, msgHandle)
+
+    def editInline(self, inlineMsg):
+        if self.editor is not None:
+            self.editor.editMessageText(inlineMsg, reply_markup = inlineKeyboard)
 
     def on_chat_message(self, msg):
         content_type, chat_type, chat_id = telepot.glance(msg)
@@ -117,26 +132,27 @@ class Handler(telepot.helper.ChatHandler):
         #ask db for user rights if not cached
         if (self._access < 0):
             self._access = userdb.access4Tele(teleId)
+        #
 
         #check if user meets minimum level of access
         if (self._access <= 0):
             print('User <' + str(teleId) + '> tried to access bot, but was rejected with ' + str(self._access))
-            self.sender.sendMessage(answerAccessDenied)
+            self.sendSimple(answerAccessDenied)
             return
+        #
 
-        # Здесь можно обрабатывать команды вида /command
+        #handle simple /commands
         if content_type == 'text':
             if (msg['text'] == '/start') or (msg['text'] == '/help'):
-                self.sender.sendMessage(answerInstructions)
+                self.sendSimple(answerInstructions)
                 return
         #
 
+        #handle location
         if (content_type == 'location'):
             #remove inline keyboard from old message if exists
-            if self.editor is not None:
-                self.editor.editMessageText('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМетки в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
+            self.sendSimple(answerQueryProcessing)
 
-            self.sender.sendMessage(answerQueryProcessing)
             self.lat0 = float(msg['location']['latitude'])
             self.lon0 = float(msg['location']['longitude'])
 
@@ -159,43 +175,39 @@ class Handler(telepot.helper.ChatHandler):
             screen = ("screen.png", response) #В telegram api обязательно нужно, чтобы у файла было название
             self.sender.sendPhoto(screen)
             #self.editor to sent edit message
-            sentMessage = self.sender.sendMessage('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.', reply_markup = inlineKeyboard)
-            self.editor = telepot.helper.Editor(bot, sentMessage)
+            self.sendWithInline('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
             return
+        #
 
         #Nothing happend -> unknownCommand
-        self.sender.sendMessage(answerUnknownCommand)
+        self.sendSimple(answerUnknownCommand)
+    #
 
     def on_callback_query(self, data):
-        if data['data'] == '+':
-            if self.option > 0:
-                self.option -= 1 #Yap, small paradox -.- Minus here because I am originally made a zoomOptions[''][i+1]  radius less than zoomOptions[''][i]. Whoops. And I am too lazy to fix it .-. So there is a paradox^^
-                self.localMarkersCount = 0
-                for c in markers:
-                    if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
-                        self.localMarkersCount += 1
+        if data['data'] == '+' or data['data'] == '-':
+            needUpdate = False
 
-                #Change the info in message with inline keyboard
-                self.editor.editMessageText('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.', reply_markup = inlineKeyboard)
-            return
+            if data['data'] == '+' and self.option > 0:
+                self.option -= 1
+                needUpdate = True
 
-        elif data['data'] == '-':
-            if self.option < 3:
+            if data['data'] == '-' and self.option < 3:
                 self.option += 1
+                needUpdate = True
+
+            if needUpdate:
                 self.localMarkersCount = 0
                 for c in markers:
                     if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
                         self.localMarkersCount += 1
 
                 #Change the info in message with inline keyboard
-                self.editor.editMessageText('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.', reply_markup = inlineKeyboard)
+                self.editInline('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
             return
 
         elif data['data'] == 'screen':
             #Remove inline keyboard in message with inline keyboard
-            self.editor.editMessageText('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
-
-            self.sender.sendMessage(answerQueryProcessing)
+            self.sendSimple(answerQueryProcessing)
 
             localMarkers = []
             self.localMarkersCount = 0
@@ -213,14 +225,14 @@ class Handler(telepot.helper.ChatHandler):
             self.sender.sendPhoto(screen)
 
             #new message to edit
-            sentMessage = self.sender.sendMessage('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.', reply_markup = inlineKeyboard)
-            self.editor = telepot.helper.Editor(bot, sentMessage)
+            self.sendWithInline('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
             return
+        #
+    #
 
     def on_close(self, exception):
-        #remove inline keyboard on timeout if exists
-        if self.editor is not None:
-            self.editor.editMessageText('Радиус: ' + zoomOptions['distStr'][self.option] + '\nМеток в радиусе: ' + str(self.localMarkersCount) + '\nИспользуйте "+" и "-" для увеличения/уменьшения радиуса и "Новый снимок" для получения снимка карты с новым радиусом.')
+        self.removeInline()
+    #
 
 TOKEN = sys.argv[1]
 DBURL = sys.argv[2]
