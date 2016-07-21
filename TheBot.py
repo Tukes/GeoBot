@@ -17,6 +17,10 @@ from urllib import request as req
 #local stuff
 from userdb import UserDB #to check user access from remote database
 from VincentysFormulae import distance #to get distance by lat and lon of two points
+from stereo import StereoProjection
+
+#init cartography
+stereo = StereoProjection(59.938630, 30.314130)
 
 #structure to hold marker information
 class Marker:
@@ -24,11 +28,18 @@ class Marker:
         self.lat = 0.0
         self.lon = 0.0
         self.hei = 0.0
+        self.x   = 0.0
+        self.y   = 0.0
         self.name = ''
         self.info = ''
 
     def relevant(self, lat0, lon0, dist):
         if (distance(self.lat, self.lon, lat0, lon0) + 20) < dist: #plus 20 because of inaccuracy 
+            return True
+        return False
+
+    def relevantXY(self, x0, y0, dist):
+        if abs(self.x - x0) <= dist and abs(self.y - y0) <= dist:
             return True
         return False
 
@@ -50,6 +61,7 @@ for c in markerText:
     marker.lat = float(coords[1])
     marker.lon = float(coords[0])
     marker.hei = float(coords[2])
+    marker.x, marker.y, k = stereo.geoToStereo(marker.lat, marker.lon)
     marker.name = coords[3]
     marker.info = coords[4]
     markers.append(marker)
@@ -146,9 +158,10 @@ class Handler(telepot.helper.ChatHandler):
 
             markersProcessed = 0
             print(datetime.datetime.now().strftime("%H:%M:%S.%f") + ' Begin')
+            x0, y0, k = stereo.geoToStereo(self.lat0, self.lon0)
             for c in markers:
                 markersProcessed += 1
-                if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
+                if c.relevantXY(x0, y0, zoomOptions['distInt'][self.option]):
                     localMarkers.append(c)
                     self.localMarkersCount += 1 #sad that you cant use self.localMarkersCount++ in python :c
             print(datetime.datetime.now().strftime("%H:%M:%S.%f") + ' End: ' + str(markersProcessed))
