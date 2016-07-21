@@ -86,9 +86,9 @@ zoomOptions = {         #the dict, which matches 3 things: zoomLevel, distanceIn
 
 #the dict, which matches 3 things: zoomLevel, distanceInt, distanceString
 zoomOptions = {
-    'zoom'    : ['14',  '15',   '16',   '17'  ],
-    'distInt' : [ 2000,  950,    470,    240  ],
-    'distStr' : ['2км', '950м', '470м', '240м']
+    'zoom'    : ['14',    '15',   '16',   '17'  ],
+    'distInt' : [ 1500,    700,    350,    150  ],
+    'distStr' : ['1.5км', '700м', '350м', '150м']
     }
 
 AnswerUnknownCommand    = 'Неизвестная команда.'
