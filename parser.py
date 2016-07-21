@@ -1,13 +1,14 @@
 #!/usr/bin/env python 
 # -*- coding: UTF-8 -*-
 
+import codecs
 import re
 
-Input = open('mapKML.kml', 'r')
+Input = codecs.open('mapKML.kml', 'r', 'utf-8')
 inputString = Input.read()
 Input.close()
 
-Output = open('marks.txt', 'w')
+Output = codecs.open('marks.txt', 'w', 'utf-8')
 
 pattern = r'<Placemark>(.*?)</Placemark>'
 placemarksList = re.findall(pattern, inputString, flags=re.DOTALL)
