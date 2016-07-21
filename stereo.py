@@ -3,12 +3,7 @@
 
 import math
 
-def mapDegreeToRad(degreeString):
-    parts = degreeString.split(".")
-    degree = float(parts[0]) + (float(parts[1]) / 60.0) + (float(parts[2]) / 360.0)
-    return math.radians(degree)
-
-def xi(phi, e):
+def _xi_(phi, e):
     sinPhi = math.sin(phi)
     eSinPhi = e * sinPhi
     result = (1.0 - eSinPhi)/(1.0 + eSinPhi)
@@ -19,32 +14,31 @@ def xi(phi, e):
     result = result - (math.pi / 2.0)
     return result
 
-def m(phi, e):
+def _m_(phi, e):
     eSinPhi = e * math.sin(phi)
-    result = (math.cos(phi))/(math.pow(1.0 - (eSinPhi * eSinPhi), 0.5))
+    result = (math.cos(phi))/(math.sqrt(1.0 - (eSinPhi * eSinPhi)))
     return result
 
 class StereoProjection:
-    def __init__(self, lat0Str, lon0Str): #shirota-dolgota phi-lambda N&E - positive, S&W - negative
-        self.lat0 = mapDegreeToRad(lat0Str)
-        self.lon0 = mapDegreeToRad(lon0Str)
+    def __init__(self, lat0, lon0): #shirota-dolgota phi-lambda N&E - positive, S&W - negative
+        self.lat0 = math.radians(lat0)
+        self.lon0 = math.radians(lon0)
         self.a = 6378206.4
         self.e = 0.0822719
         self.k0 = 0.9999
 
-        xi0 = xi(self.lat0, self.e)
+        self.m0 = _m_(self.lat0, self.e)
 
-        self.m0 = m(self.lat0, self.e)
-
+        xi0 = _xi_(self.lat0, self.e)
         self.sinXi0 = math.sin(xi0)
         self.cosXi0 = math.cos(xi0)
 
-    def geoToStereo(self, latStr, lonStr):
-        lat1 = mapDegreeToRad(latStr)
-        lon1 = mapDegreeToRad(lonStr)
+    def geoToStereo(self, lat1, lon1):
+        lat1 = math.radians(lat1)
+        lon1 = math.radians(lon1)
 
-        xi1 = xi(lat1, self.e)
-        m1 = m(lat1, self.e)
+        xi1 = _xi_(lat1, self.e)
+        m1 = _m_(lat1, self.e)
 
         sinXi1 = math.sin(xi1)
         cosXi1 = math.cos(xi1)
@@ -63,8 +57,8 @@ class StereoProjection:
         
 
 if __name__ == "__main__":
-    stereo = StereoProjection("40.00.00", "-100.00.00") #TODO define simple format for deg-min-sec
-    x, y, k = stereo.geoToStereo("30.00.00", "-90.00.00")
+    stereo = StereoProjection(40.0, -100.0)
+    x, y, k = stereo.geoToStereo(30.0, -90.0)
     print(str(x))
     print(str(y))
     print(str(k))
