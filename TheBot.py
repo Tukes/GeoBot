@@ -12,22 +12,26 @@ from telepot.delegate import per_chat_id, create_open
 
 #local stuff
 from userdb import UserDB #to check user access from remote database
-from VincentysFormulae import distance #to get distance by lat and lon of two points
+from stereo import StereoProjection
+
+#init cartography
+stereo = StereoProjection(59.938630, 30.314130)
 
 #structure to hold marker information
 class Marker:
     def __init__(self):
         self.lat = 0.0
         self.lon = 0.0
+        self.x   = 0.0
+        self.y   = 0.0
         self.name = ''
         self.info = ''
     #
 
-    def relevant(self, lat0, lon0, dist):
-        if (distance(self.lat, self.lon, lat0, lon0) + 20) < dist: #plus 20 because of inaccuracy
+    def relevant(self, x0, y0, dist):
+        if abs(self.x - x0) <= dist and abs(self.y - y0) <= dist:
             return True
         return False
-    #
 
     def requestString(self):
         return '%7C' + str(self.lat) + ',' + str(self.lon)
@@ -44,6 +48,7 @@ for c in markerText:
     marker = Marker()
     marker.lat = float(coords[1])
     marker.lon = float(coords[0])
+    marker.x, marker.y, k = stereo.geoToStereo(marker.lat, marker.lon)
     marker.name = coords[3]
     marker.info = coords[4]
     markers.append(marker)
@@ -81,9 +86,9 @@ zoomOptions = {         #the dict, which matches 3 things: zoomLevel, distanceIn
 
 #the dict, which matches 3 things: zoomLevel, distanceInt, distanceString
 zoomOptions = {
-    'zoom'    : ['14',  '15',   '16',   '17'  ],
-    'distInt' : [ 2000,  950,    470,    240  ],
-    'distStr' : ['2км', '950м', '470м', '240м']
+    'zoom'    : ['14',    '15',   '16',   '17'  ],
+    'distInt' : [ 1500,    700,    350,    150  ],
+    'distStr' : ['1.5км', '700м', '350м', '150м']
     }
 
 AnswerUnknownCommand    = 'Неизвестная команда.'
@@ -98,6 +103,8 @@ class Handler(telepot.helper.ChatHandler):
         self._access = -1  #not verified yet
         self.lat0 = 0.0    #last user coordinates
         self.lon0 = 0.0    #last user coordinates
+        self.x0   = 0.0
+        self.y0   = 0.0
         self.option = 1    #last user zoom option
         self.editor = None #for editing messages
     #
@@ -131,7 +138,7 @@ class Handler(telepot.helper.ChatHandler):
         localMarkers = []
 
         for c in markers:
-            if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
+            if c.relevant(self.x0, self.y0, zoomOptions['distInt'][self.option]):
                 localMarkers.append(c)
 
         #make request string for google maps api for picture
@@ -177,6 +184,7 @@ class Handler(telepot.helper.ChatHandler):
 
             self.lat0 = float(msg['location']['latitude'])
             self.lon0 = float(msg['location']['longitude'])
+            self.x0, self.y0, k = stereo.geoToStereo(self.lat0, self.lon0)
 
             self.mapRoutine()
 
@@ -204,7 +212,7 @@ class Handler(telepot.helper.ChatHandler):
             if needUpdate:
                 localMarkersCount = 0
                 for c in markers:
-                    if c.relevant(self.lat0, self.lon0, zoomOptions['distInt'][self.option]):
+                    if c.relevant(self.x0, self.y0, zoomOptions['distInt'][self.option]):
                         localMarkersCount += 1
 
                 #Change the info in message with inline keyboard
