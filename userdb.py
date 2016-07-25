@@ -16,7 +16,7 @@ class UserDB:
         print('Check access of ' + str(telegramid))
 
         try:
-            now = datetime.datetime.now()
+            now = datetime.datetime.utcnow()
             accessToken = md5((eval(self._dbtoken)).encode('utf-8')).hexdigest()
         
             sock = socket.socket()
