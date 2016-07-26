@@ -3,7 +3,6 @@
 
 import sys
 import datetime
-import codecs
 from urllib import request
 
 #Telepot
@@ -14,25 +13,17 @@ from telepot.delegate import per_chat_id, create_open
 from userdb import UserDB #to check user access from remote database
 from stereo import StereoProjection
 from marker import Marker
+from kmlparser import readFromFile
 
 #init cartography
 stereo = StereoProjection(59.938630, 30.314130)
 
-markerFile = codecs.open('marks.txt', 'r', 'utf-8')
-markerText = markerFile.readlines()
-markerFile.close()
+#read from google maps export
+markers = readFromFile('mapKML.kml')
 
-markers = []
-for c in markerText:
-    #TODO better parsing
-    coords = c.split(' - ')
-    marker = Marker()
-    marker.lat = float(coords[1])
-    marker.lon = float(coords[0])
+#make stereo coordinates
+for marker in markers:
     marker.x, marker.y, k = stereo.geoToStereo(marker.lat, marker.lon)
-    marker.name = coords[3]
-    marker.info = coords[4]
-    markers.append(marker)
 
 print('Starting bot with ' + str(len(markers)) + ' points')
 
