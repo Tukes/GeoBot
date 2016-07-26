@@ -5,6 +5,7 @@
 #https://programmingadvent.blogspot.ru/2013/06/kmzkml-file-parsing-with-python.html
 
 import codecs
+from urllib import request
 import xml.sax, xml.sax.handler
 
 #local stuff
@@ -51,16 +52,14 @@ class PlacemarkHandler(xml.sax.handler.ContentHandler):
                 self.mapping[self.nameTag][name] = self.buffer
         self.buffer = ''
 
-def readFromFile(filename):
+def readFromInput(input):
     markers = []
 
     parser = xml.sax.make_parser()
     handler = PlacemarkHandler()
     parser.setContentHandler(handler)
 
-    kml = codecs.open(filename, 'r', 'utf-8')
-    parser.parse(kml)
-    kml.close()
+    parser.parse(input)
 
     names = sorted(handler.mapping.keys())
     for name in names:
@@ -79,6 +78,16 @@ def readFromFile(filename):
         marker.info = description
         markers.append(marker)
     return markers
+
+def readFromFile(filename):
+    kml = codecs.open(filename, 'r', 'utf-8')
+    retval = readFromInput(kml)
+    kml.close()
+    return retval
+
+def readFromUrl(url):
+    kml = request.urlopen(url)
+    return readFromInput(kml)
 
 if __name__ == '__main__':
     markers = readFromFile('mapKML.kml')
