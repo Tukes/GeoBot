@@ -7,6 +7,9 @@
 import codecs
 import xml.sax, xml.sax.handler
 
+#local stuff
+from marker import Marker
+
 UnwantedChars = ' \r\n\t'
 
 class PlacemarkHandler(xml.sax.handler.ContentHandler):
@@ -48,22 +51,38 @@ class PlacemarkHandler(xml.sax.handler.ContentHandler):
                 self.mapping[self.nameTag][name] = self.buffer
         self.buffer = ''
 
-parser = xml.sax.make_parser()
-handler = PlacemarkHandler()
-parser.setContentHandler(handler)
+def readFromFile(filename):
+    markers = []
 
-kml = codecs.open('mapKML.kml', 'r', 'utf-8')
-parser.parse(kml)
-kml.close()
+    parser = xml.sax.make_parser()
+    handler = PlacemarkHandler()
+    parser.setContentHandler(handler)
 
-txt = codecs.open('marks.txt', 'w', 'utf-8')
-names = sorted(handler.mapping.keys())
-for name in names:
+    kml = codecs.open(filename, 'r', 'utf-8')
+    parser.parse(kml)
+    kml.close()
+
+    names = sorted(handler.mapping.keys())
+    for name in names:
         coords = handler.mapping[name]['coordinates'].split(',')
+
         description = ''
         if 'description' in handler.mapping[name]:
             description = handler.mapping[name]['description']
         else:
             description = 'none'
-        txt.write(coords[0] + ' - ' + coords[1]+ ' - ' + coords[2]+ ' - ' + name + ' - ' + description + '\n')
-txt.close()
+
+        marker = Marker()
+        marker.lat = float(coords[1])
+        marker.lon = float(coords[0])
+        marker.name = name
+        marker.info = description
+        markers.append(marker)
+    return markers
+
+if __name__ == '__main__':
+    markers = readFromFile('mapKML.kml')
+    txt = codecs.open('marks.txt', 'w', 'utf-8')
+    for marker in markers:
+        txt.write(str(marker.lon) + ' - ' + str(marker.lat) + ' - 0.0 - ' + marker.name + ' - ' + marker.info + '\n')
+    txt.close()

@@ -13,29 +13,10 @@ from telepot.delegate import per_chat_id, create_open
 #local stuff
 from userdb import UserDB #to check user access from remote database
 from stereo import StereoProjection
+from marker import Marker
 
 #init cartography
 stereo = StereoProjection(59.938630, 30.314130)
-
-#structure to hold marker information
-class Marker:
-    def __init__(self):
-        self.lat = 0.0
-        self.lon = 0.0
-        self.x   = 0.0
-        self.y   = 0.0
-        self.name = ''
-        self.info = ''
-    #
-
-    def relevant(self, x0, y0, dist):
-        if abs(self.x - x0) <= dist and abs(self.y - y0) <= dist:
-            return True
-        return False
-
-    def requestString(self):
-        return '%7C' + str(self.lat) + ',' + str(self.lon)
-    #
 
 markerFile = codecs.open('marks.txt', 'r', 'utf-8')
 markerText = markerFile.readlines()
